@@ -1,0 +1,64 @@
+meta:
+  description: 机器层元数据
+  update_mode: auto
+  consumers: [review, livetrade]
+
+market.indexes:
+  description: 核心指数状态与均线位置
+  update_mode: auto
+  consumers: [review, livetrade]
+
+market.breadth:
+  description: 全市场涨跌家数与红盘率
+  update_mode: auto
+  consumers: [review, livetrade]
+
+market.turnover:
+  description: 全市场成交额及较前日变化
+  update_mode: auto
+  consumers: [review, livetrade]
+
+board_stats:
+  description: 涨停跌停、炸板、连板高度、首板溢价等盘面统计
+  update_mode: auto
+  consumers: [review, livetrade]
+
+stocks.limit_up:
+  description: 当日涨停股列表
+  update_mode: auto
+  consumers: [review, livetrade]
+
+stocks.limit_down:
+  description: 当日跌停股列表
+  update_mode: auto
+  consumers: [review, livetrade]
+
+stocks.broken_board:
+  description: 当日触板但未封住的炸板股列表
+  update_mode: auto
+  consumers: [review, livetrade]
+
+stocks.board_breakers:
+  description: 今日未能继续涨停的断板股列表
+  update_mode: auto
+  consumers: [review, livetrade]
+
+stocks.high_volatility:
+  description: 高波动高成交个股列表
+  update_mode: auto
+  consumers: [review, livetrade]
+
+stocks.highest_board:
+  description: 最高连板与强势高标列表
+  update_mode: auto
+  consumers: [review, livetrade]
+
+themes:
+  description: 热门板块、异动趋势与聚类提示
+  update_mode: auto
+  consumers: [review, livetrade]
+
+strategy_quant:
+  description: 八大策略量化候选结果
+  update_mode: auto
+  consumers: [review, livetrade]

@@ -1,0 +1,43 @@
+{
+  "market_regime": "",
+  "emotion_phase": "",
+  "trend_bias": "",
+  "is_ice_point": null,
+  "main_themes": [
+    {
+      "name": "",
+      "stance": "",
+      "note": ""
+    }
+  ],
+  "secondary_themes": [
+    {
+      "name": "",
+      "stance": "",
+      "note": ""
+    }
+  ],
+  "avoid_themes": [],
+  "active_strategies": [
+    {
+      "slug": "",
+      "priority": 1,
+      "reason": ""
+    }
+  ],
+  "focus_watchlist": [
+    {
+      "symbol": "",
+      "name": "",
+      "tags": [],
+      "strategy": "",
+      "note": ""
+    }
+  ],
+  "tomorrow_observation_points": [],
+  "risk_notes": [],
+  "manual_overrides": {
+    "strategy_candidates": {},
+    "strategy_excludes": {}
+  }
+}

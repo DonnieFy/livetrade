@@ -1,0 +1,1783 @@
+{
+  "meta": {
+    "trade_date": "2026-04-02",
+    "generated_at": "2026-04-02 23:38:34",
+    "version": "1.0.0"
+  },
+  "market": {
+    "indexes": {
+      "000001.SH": {
+        "name": "上证指数",
+        "close": 3919.28,
+        "pct_chg": -0.74,
+        "volume_change_pct": -3.6,
+        "ma5_pos": "below",
+        "ma20_pos": "below",
+        "recent_5d_pct": [
+          0.24,
+          -0.8,
+          1.46,
+          -0.74
+        ]
+      },
+      "399001.SZ": {
+        "name": "深证成指",
+        "close": 13486.94,
+        "pct_chg": -1.6,
+        "volume_change_pct": -2.9,
+        "ma5_pos": "below",
+        "ma20_pos": "below",
+        "recent_5d_pct": [
+          -0.25,
+          -1.81,
+          1.7,
+          -1.6
+        ]
+      },
+      "399006.SZ": {
+        "name": "创业板指",
+        "close": 3172.65,
+        "pct_chg": -2.31,
+        "volume_change_pct": -3.0,
+        "ma5_pos": "below",
+        "ma20_pos": "below",
+        "recent_5d_pct": [
+          -0.68,
+          -2.7,
+          1.96,
+          -2.31
+        ]
+      },
+      "000016.SH": {
+        "name": "上证50",
+        "close": 2853.45,
+        "pct_chg": -0.88,
+        "volume_change_pct": -7.4,
+        "ma5_pos": "above",
+        "ma20_pos": "below",
+        "recent_5d_pct": [
+          -0.14,
+          -0.25,
+          1.86,
+          -0.88
+        ]
+      },
+      "000905.SH": {
+        "name": "中证500",
+        "close": 7605.29,
+        "pct_chg": -1.87,
+        "volume_change_pct": -2.2,
+        "ma5_pos": "below",
+        "ma20_pos": "below",
+        "recent_5d_pct": [
+          0.21,
+          -1.76,
+          1.74,
+          -1.87
+        ]
+      }
+    },
+    "breadth": {
+      "date": "2026-04-02",
+      "advance": 1052,
+      "decline": 4378,
+      "flat": 55,
+      "total": 5485,
+      "advance_pct": 19.2,
+      "decline_pct": 79.8,
+      "ratio": 0.24
+    },
+    "turnover": {
+      "total_amount_yi": 18577.9,
+      "prev_amount_yi": 20248.38,
+      "change_pct": -8.2
+    }
+  },
+  "board_stats": {
+    "limit_up_count": 28,
+    "limit_down_count": 8,
+    "hit_limit_up_count": 48,
+    "broken_board_count": 20,
+    "seal_rate": 58.3,
+    "broken_board_rate": 41.7,
+    "consecutive_board_count": 6,
+    "max_board_height": 5,
+    "consecutive_board_ladder": {
+      "5": [
+        {
+          "symbol": "600488",
+          "name": "津药药业",
+          "board_count": 5
+        }
+      ],
+      "3": [
+        {
+          "symbol": "002560",
+          "name": "通达股份",
+          "board_count": 3
+        },
+        {
+          "symbol": "300834",
+          "name": "星辉环材",
+          "board_count": 3
+        },
+        {
+          "symbol": "605162",
+          "name": "新中港",
+          "board_count": 3
+        }
+      ],
+      "2": [
+        {
+          "symbol": "000788",
+          "name": "北大医药",
+          "board_count": 2
+        },
+        {
+          "symbol": "600594",
+          "name": "益佰制药",
+          "board_count": 2
+        }
+      ]
+    },
+    "first_board_premium": 0.13,
+    "yesterday_limit_up_performance": {
+      "avg_pct_chg": 1.05,
+      "win_rate": 51.7,
+      "count": 58
+    },
+    "emotion_5d_matrix": [
+      {
+        "date": "2026-03-27",
+        "total_amount_yi": 18485.4,
+        "advance": 4208,
+        "decline": 1031,
+        "advance_pct": 79.4,
+        "limit_up": 79,
+        "limit_down": 2,
+        "hit_limit_up": 99,
+        "broken_limit_up": 20,
+        "seal_rate": 79.8,
+        "streak2_count": 1,
+        "streak3_count": 1,
+        "market_height": 5,
+        "first_board_premium": 2.69,
+        "emotion_label": "高潮"
+      },
+      {
+        "date": "2026-03-30",
+        "total_amount_yi": 19137.48,
+        "advance": 2778,
+        "decline": 2387,
+        "advance_pct": 52.4,
+        "limit_up": 63,
+        "limit_down": 11,
+        "hit_limit_up": 82,
+        "broken_limit_up": 19,
+        "seal_rate": 76.8,
+        "streak2_count": 1,
+        "streak3_count": 1,
+        "market_height": 5,
+        "first_board_premium": 1.66,
+        "emotion_label": "中性"
+      },
+      {
+        "date": "2026-03-31",
+        "total_amount_yi": 19853.67,
+        "advance": 972,
+        "decline": 4242,
+        "advance_pct": 18.3,
+        "limit_up": 53,
+        "limit_down": 3,
+        "hit_limit_up": 72,
+        "broken_limit_up": 19,
+        "seal_rate": 73.6,
+        "streak2_count": 4,
+        "streak3_count": 4,
+        "market_height": 5,
+        "first_board_premium": 1.53,
+        "emotion_label": "中性"
+      },
+      {
+        "date": "2026-04-01",
+        "total_amount_yi": 20060.85,
+        "advance": 4377,
+        "decline": 829,
+        "advance_pct": 82.5,
+        "limit_up": 57,
+        "limit_down": 7,
+        "hit_limit_up": 99,
+        "broken_limit_up": 42,
+        "seal_rate": 57.6,
+        "streak2_count": 6,
+        "streak3_count": 4,
+        "market_height": 5,
+        "first_board_premium": -0.82,
+        "emotion_label": "中性"
+      },
+      {
+        "date": "2026-04-02",
+        "total_amount_yi": 18415.8,
+        "advance": 1017,
+        "decline": 4233,
+        "advance_pct": 19.2,
+        "limit_up": 28,
+        "limit_down": 8,
+        "hit_limit_up": 48,
+        "broken_limit_up": 20,
+        "seal_rate": 58.3,
+        "streak2_count": 6,
+        "streak3_count": 4,
+        "market_height": 5,
+        "first_board_premium": 0.13,
+        "emotion_label": "冰点"
+      }
+    ]
+  },
+  "stocks": {
+    "limit_up": [
+      {
+        "symbol": "920230",
+        "name": "欧康医药",
+        "close": 14.61,
+        "pct_chg": 29.98
+      },
+      {
+        "symbol": "300834",
+        "name": "星辉环材",
+        "close": 43.49,
+        "pct_chg": 20.01
+      },
+      {
+        "symbol": "300839",
+        "name": "博汇股份",
+        "close": 16.69,
+        "pct_chg": 19.99
+      },
+      {
+        "symbol": "600339",
+        "name": "中油工程",
+        "close": 4.46,
+        "pct_chg": 10.12
+      },
+      {
+        "symbol": "600594",
+        "name": "益佰制药",
+        "close": 4.8,
+        "pct_chg": 10.09
+      },
+      {
+        "symbol": "600488",
+        "name": "津药药业",
+        "close": 6.34,
+        "pct_chg": 10.07
+      },
+      {
+        "symbol": "000788",
+        "name": "北大医药",
+        "close": 7.22,
+        "pct_chg": 10.06
+      },
+      {
+        "symbol": "002038",
+        "name": "双鹭药业",
+        "close": 8.55,
+        "pct_chg": 10.04
+      },
+      {
+        "symbol": "002560",
+        "name": "通达股份",
+        "close": 13.06,
+        "pct_chg": 10.03
+      },
+      {
+        "symbol": "605162",
+        "name": "新中港",
+        "close": 14.05,
+        "pct_chg": 10.02
+      },
+      {
+        "symbol": "000586",
+        "name": "汇源通信",
+        "close": 17.15,
+        "pct_chg": 10.01
+      },
+      {
+        "symbol": "600644",
+        "name": "乐山电力",
+        "close": 12.64,
+        "pct_chg": 10.01
+      },
+      {
+        "symbol": "603042",
+        "name": "华脉科技",
+        "close": 21.76,
+        "pct_chg": 10.01
+      },
+      {
+        "symbol": "603122",
+        "name": "合富中国",
+        "close": 18.69,
+        "pct_chg": 10.01
+      },
+      {
+        "symbol": "603353",
+        "name": "和顺石油",
+        "close": 36.5,
+        "pct_chg": 10.01
+      },
+      {
+        "symbol": "603477",
+        "name": "巨星农牧",
+        "close": 17.03,
+        "pct_chg": 10.01
+      },
+      {
+        "symbol": "603863",
+        "name": "松炀资源",
+        "close": 17.25,
+        "pct_chg": 10.01
+      },
+      {
+        "symbol": "000950",
+        "name": "重药控股",
+        "close": 6.49,
+        "pct_chg": 10.0
+      },
+      {
+        "symbol": "002263",
+        "name": "大东南",
+        "close": 4.73,
+        "pct_chg": 10.0
+      },
+      {
+        "symbol": "603798",
+        "name": "康普顿",
+        "close": 15.62,
+        "pct_chg": 10.0
+      },
+      {
+        "symbol": "000762",
+        "name": "西藏矿业",
+        "close": 31.26,
+        "pct_chg": 9.99
+      },
+      {
+        "symbol": "002051",
+        "name": "中工国际",
+        "close": 9.91,
+        "pct_chg": 9.99
+      },
+      {
+        "symbol": "000155",
+        "name": "川能动力",
+        "close": 16.97,
+        "pct_chg": 9.98
+      },
+      {
+        "symbol": "000720",
+        "name": "新能泰山",
+        "close": 5.4,
+        "pct_chg": 9.98
+      },
+      {
+        "symbol": "000968",
+        "name": "蓝焰控股",
+        "close": 10.91,
+        "pct_chg": 9.98
+      },
+      {
+        "symbol": "002828",
+        "name": "贝肯能源",
+        "close": 13.79,
+        "pct_chg": 9.97
+      },
+      {
+        "symbol": "603222",
+        "name": "济民健康",
+        "close": 10.15,
+        "pct_chg": 9.97
+      },
+      {
+        "symbol": "002309",
+        "name": "中利集团",
+        "close": 4.98,
+        "pct_chg": 9.93
+      }
+    ],
+    "limit_down": [
+      {
+        "symbol": "000631",
+        "name": "顺发恒能",
+        "close": 3.56,
+        "pct_chg": -9.87
+      },
+      {
+        "symbol": "002102",
+        "name": "能特科技",
+        "close": 3.0,
+        "pct_chg": -9.91
+      },
+      {
+        "symbol": "002905",
+        "name": "金逸影视",
+        "close": 10.2,
+        "pct_chg": -9.97
+      },
+      {
+        "symbol": "600310",
+        "name": "广西能源",
+        "close": 5.14,
+        "pct_chg": -9.98
+      },
+      {
+        "symbol": "600726",
+        "name": "华电能源",
+        "close": 5.32,
+        "pct_chg": -9.98
+      },
+      {
+        "symbol": "000048",
+        "name": "京基智农",
+        "close": 19.16,
+        "pct_chg": -10.0
+      },
+      {
+        "symbol": "603008",
+        "name": "喜临门",
+        "close": 13.68,
+        "pct_chg": -10.0
+      },
+      {
+        "symbol": "002357",
+        "name": "富临运业",
+        "close": 13.01,
+        "pct_chg": -10.03
+      }
+    ],
+    "broken_board": [
+      {
+        "symbol": "601872",
+        "name": "招商轮船",
+        "pct_chg": 8.17,
+        "close": 19.47,
+        "amount_yi": 64.28
+      },
+      {
+        "symbol": "601869",
+        "name": "长飞光纤",
+        "pct_chg": 7.95,
+        "close": 332.49,
+        "amount_yi": 63.38
+      },
+      {
+        "symbol": "002353",
+        "name": "杰瑞股份",
+        "pct_chg": 7.56,
+        "close": 108.0,
+        "amount_yi": 43.35
+      },
+      {
+        "symbol": "002471",
+        "name": "中超控股",
+        "pct_chg": 6.12,
+        "close": 9.36,
+        "amount_yi": 43.35
+      },
+      {
+        "symbol": "603538",
+        "name": "美诺华",
+        "pct_chg": 6.36,
+        "close": 42.32,
+        "amount_yi": 39.05
+      },
+      {
+        "symbol": "000070",
+        "name": "特发信息",
+        "pct_chg": 4.99,
+        "close": 19.37,
+        "amount_yi": 38.75
+      },
+      {
+        "symbol": "002273",
+        "name": "水晶光电",
+        "pct_chg": 6.98,
+        "close": 24.84,
+        "amount_yi": 32.57
+      },
+      {
+        "symbol": "601975",
+        "name": "招商南油",
+        "pct_chg": 6.43,
+        "close": 4.8,
+        "amount_yi": 29.18
+      },
+      {
+        "symbol": "002437",
+        "name": "誉衡药业",
+        "pct_chg": 7.61,
+        "close": 3.82,
+        "amount_yi": 18.75
+      },
+      {
+        "symbol": "000078",
+        "name": "海王生物",
+        "pct_chg": 4.64,
+        "close": 3.61,
+        "amount_yi": 15.78
+      },
+      {
+        "symbol": "002923",
+        "name": "润都股份",
+        "pct_chg": 0.64,
+        "close": 17.35,
+        "amount_yi": 10.39
+      },
+      {
+        "symbol": "001208",
+        "name": "华菱线缆",
+        "pct_chg": 5.3,
+        "close": 19.88,
+        "amount_yi": 9.87
+      },
+      {
+        "symbol": "600249",
+        "name": "两面针",
+        "pct_chg": 1.85,
+        "close": 7.14,
+        "amount_yi": 9.45
+      },
+      {
+        "symbol": "601515",
+        "name": "衢州东峰",
+        "pct_chg": 4.62,
+        "close": 4.76,
+        "amount_yi": 9.0
+      },
+      {
+        "symbol": "600101",
+        "name": "明星电力",
+        "pct_chg": 4.08,
+        "close": 9.96,
+        "amount_yi": 7.12
+      },
+      {
+        "symbol": "603016",
+        "name": "新宏泰",
+        "pct_chg": 7.53,
+        "close": 51.1,
+        "amount_yi": 6.63
+      },
+      {
+        "symbol": "000593",
+        "name": "德龙汇能",
+        "pct_chg": 8.15,
+        "close": 16.98,
+        "amount_yi": 6.12
+      },
+      {
+        "symbol": "600829",
+        "name": "人民同泰",
+        "pct_chg": 9.39,
+        "close": 11.3,
+        "amount_yi": 4.72
+      },
+      {
+        "symbol": "000632",
+        "name": "三木集团",
+        "pct_chg": 3.16,
+        "close": 4.89,
+        "amount_yi": 4.13
+      },
+      {
+        "symbol": "002890",
+        "name": "弘宇股份",
+        "pct_chg": 4.24,
+        "close": 16.47,
+        "amount_yi": 1.6
+      }
+    ],
+    "board_breakers": [
+      {
+        "symbol": "002821",
+        "name": "凯莱英",
+        "prev_board_count": 2,
+        "pct_chg": 3.94,
+        "close": 126.65
+      }
+    ],
+    "high_volatility": [
+      {
+        "symbol": "920230",
+        "name": "欧康医药",
+        "pct_chg": 29.98,
+        "amount_yi": 1.66,
+        "close": 14.61
+      },
+      {
+        "symbol": "300834",
+        "name": "星辉环材",
+        "pct_chg": 20.01,
+        "amount_yi": 9.4,
+        "close": 43.49
+      },
+      {
+        "symbol": "300839",
+        "name": "博汇股份",
+        "pct_chg": 19.99,
+        "amount_yi": 3.73,
+        "close": 16.69
+      },
+      {
+        "symbol": "300086",
+        "name": "康芝药业",
+        "pct_chg": 16.06,
+        "amount_yi": 11.54,
+        "close": 9.9
+      },
+      {
+        "symbol": "301188",
+        "name": "力诺药包",
+        "pct_chg": 15.35,
+        "amount_yi": 14.34,
+        "close": 23.59
+      },
+      {
+        "symbol": "920088",
+        "name": "科力股份",
+        "pct_chg": 15.76,
+        "amount_yi": 7.34,
+        "close": 61.98
+      },
+      {
+        "symbol": "688336",
+        "name": "三生国健",
+        "pct_chg": 13.41,
+        "amount_yi": 16.91,
+        "close": 90.38
+      },
+      {
+        "symbol": "688618",
+        "name": "三旺通信",
+        "pct_chg": 13.13,
+        "amount_yi": 2.4,
+        "close": 36.44
+      },
+      {
+        "symbol": "920047",
+        "name": "诺思兰德",
+        "pct_chg": 12.63,
+        "amount_yi": 3.52,
+        "close": 28.44
+      },
+      {
+        "symbol": "300667",
+        "name": "必创科技",
+        "pct_chg": 12.11,
+        "amount_yi": 4.16,
+        "close": 17.78
+      },
+      {
+        "symbol": "300547",
+        "name": "川环科技",
+        "pct_chg": 10.91,
+        "amount_yi": 10.37,
+        "close": 35.29
+      },
+      {
+        "symbol": "002309",
+        "name": "中利集团",
+        "pct_chg": 9.93,
+        "amount_yi": 35.68,
+        "close": 4.98
+      },
+      {
+        "symbol": "002560",
+        "name": "通达股份",
+        "pct_chg": 10.03,
+        "amount_yi": 27.09,
+        "close": 13.06
+      },
+      {
+        "symbol": "002263",
+        "name": "大东南",
+        "pct_chg": 10.0,
+        "amount_yi": 25.77,
+        "close": 4.73
+      },
+      {
+        "symbol": "688143",
+        "name": "长盈通",
+        "pct_chg": 10.42,
+        "amount_yi": 12.77,
+        "close": 61.7
+      }
+    ],
+    "highest_board": [
+      {
+        "symbol": "600488",
+        "name": "津药药业",
+        "board_count": 5,
+        "pct_chg": 10.07,
+        "close": 6.34
+      },
+      {
+        "symbol": "002560",
+        "name": "通达股份",
+        "board_count": 3,
+        "pct_chg": 10.03,
+        "close": 13.06
+      },
+      {
+        "symbol": "300834",
+        "name": "星辉环材",
+        "board_count": 3,
+        "pct_chg": 20.01,
+        "close": 43.49
+      },
+      {
+        "symbol": "605162",
+        "name": "新中港",
+        "board_count": 3,
+        "pct_chg": 10.02,
+        "close": 14.05
+      },
+      {
+        "symbol": "000788",
+        "name": "北大医药",
+        "board_count": 2,
+        "pct_chg": 10.06,
+        "close": 7.22
+      },
+      {
+        "symbol": "600594",
+        "name": "益佰制药",
+        "board_count": 2,
+        "pct_chg": 10.09,
+        "close": 4.8
+      },
+      {
+        "symbol": "000155",
+        "name": "川能动力",
+        "board_count": 1,
+        "pct_chg": 9.98,
+        "close": 16.97
+      },
+      {
+        "symbol": "000586",
+        "name": "汇源通信",
+        "board_count": 1,
+        "pct_chg": 10.01,
+        "close": 17.15
+      },
+      {
+        "symbol": "000720",
+        "name": "新能泰山",
+        "board_count": 1,
+        "pct_chg": 9.98,
+        "close": 5.4
+      },
+      {
+        "symbol": "000762",
+        "name": "西藏矿业",
+        "board_count": 1,
+        "pct_chg": 9.99,
+        "close": 31.26
+      }
+    ]
+  },
+  "themes": {
+    "hot_sectors": {
+      "limit_up_symbols": [
+        "000155",
+        "000586",
+        "000720",
+        "000762",
+        "000788",
+        "000950",
+        "000968",
+        "002038",
+        "002051",
+        "002263",
+        "002309",
+        "002560",
+        "002828",
+        "300834",
+        "300839",
+        "600339",
+        "600488",
+        "600594",
+        "600644",
+        "603042",
+        "603122",
+        "603222",
+        "603353",
+        "603477",
+        "603798",
+        "603863",
+        "605162",
+        "920047",
+        "920088",
+        "920230",
+        "920367"
+      ],
+      "high_volatility_symbols": [
+        "920230",
+        "300834",
+        "300839",
+        "300086",
+        "301188",
+        "920088",
+        "688336",
+        "688618",
+        "920047",
+        "300667",
+        "300547",
+        "002309",
+        "002560",
+        "002263",
+        "688143",
+        "000762",
+        "688553",
+        "002038",
+        "300632",
+        "000155",
+        "000720",
+        "603122",
+        "600644",
+        "600339",
+        "000788",
+        "002051",
+        "600594",
+        "603042",
+        "605162",
+        "603477",
+        "000950",
+        "603222",
+        "000968",
+        "002828",
+        "601872",
+        "601869",
+        "603863",
+        "300255",
+        "920367",
+        "603353",
+        "000586",
+        "600829",
+        "688090",
+        "603798",
+        "688805",
+        "002353",
+        "600488",
+        "300055",
+        "301408",
+        "002437"
+      ],
+      "combined_symbols": [
+        "000155",
+        "000586",
+        "000720",
+        "000762",
+        "000788",
+        "000950",
+        "000968",
+        "002038",
+        "002051",
+        "002263",
+        "002309",
+        "002560",
+        "002828",
+        "300834",
+        "300839",
+        "600339",
+        "600488",
+        "600594",
+        "600644",
+        "603042",
+        "603122",
+        "603222",
+        "603353",
+        "603477",
+        "603798",
+        "603863",
+        "605162",
+        "920047",
+        "920088",
+        "920230",
+        "920367",
+        "300086",
+        "301188",
+        "688336",
+        "688618",
+        "300667",
+        "300547",
+        "688143",
+        "688553",
+        "300632",
+        "601872",
+        "601869",
+        "300255",
+        "600829",
+        "688090",
+        "688805",
+        "002353",
+        "300055",
+        "301408",
+        "002437"
+      ],
+      "svk_command_hint": "svk analyze 000155 000586 000720 000762 000788 000950 000968 002038 002051 002263 002309 002560 002828 300834 300839 600339 600488 600594 600644 603042 603122 603222 603353 603477 603798 603863 605162 920047 920088 920230 920367 300086 301188 688336 688618 300667 300547 688143 688553 300632 601872 601869 300255 600829 688090 688805 002353 300055 301408 002437 -k 5 --top 5"
+    },
+    "action_analysis": {
+      "date": "2026-04-02",
+      "available": true,
+      "total_limit_up_count": 11,
+      "total_streak_count": 11,
+      "max_streak_height": 10,
+      "total_limit_up_amount_yi": 477.94,
+      "sectors": [
+        {
+          "name": "医疗医药",
+          "stock_count": 7,
+          "limit_up_count": 5,
+          "streak_count": 5,
+          "max_height": 7,
+          "total_amount_yi": 52.38,
+          "avg_pct_chg": 12.89,
+          "top_stocks": [
+            {
+              "code": "002038",
+              "name": "双鹭药业",
+              "day": 7,
+              "edition": 4,
+              "amount_yi": 15.1,
+              "pct_chg": 10.04
+            },
+            {
+              "code": "600488",
+              "name": "津药药业",
+              "day": 5,
+              "edition": 5,
+              "amount_yi": 0.94,
+              "pct_chg": 10.07
+            },
+            {
+              "code": "603122",
+              "name": "合富中国",
+              "day": 4,
+              "edition": 2,
+              "amount_yi": 12.77,
+              "pct_chg": 10.01
+            },
+            {
+              "code": "000788",
+              "name": "北大医药",
+              "day": 2,
+              "edition": 2,
+              "amount_yi": 9.9,
+              "pct_chg": 10.06
+            },
+            {
+              "code": "600594",
+              "name": "益佰制药",
+              "day": 2,
+              "edition": 2,
+              "amount_yi": 7.36,
+              "pct_chg": 10.09
+            }
+          ]
+        },
+        {
+          "name": "电力",
+          "stock_count": 4,
+          "limit_up_count": 3,
+          "streak_count": 3,
+          "max_height": 8,
+          "total_amount_yi": 57.71,
+          "avg_pct_chg": 10.0,
+          "top_stocks": [
+            {
+              "code": "000720",
+              "name": "新能泰山",
+              "day": 8,
+              "edition": 6,
+              "amount_yi": 13.7,
+              "pct_chg": 9.98
+            },
+            {
+              "code": "002263",
+              "name": "大东南",
+              "day": 6,
+              "edition": 4,
+              "amount_yi": 25.77,
+              "pct_chg": 10.0
+            },
+            {
+              "code": "605162",
+              "name": "新中港",
+              "day": 3,
+              "edition": 3,
+              "amount_yi": 6.43,
+              "pct_chg": 10.02
+            },
+            {
+              "code": "600644",
+              "name": "乐山电力",
+              "day": 1,
+              "edition": 0,
+              "amount_yi": 11.82,
+              "pct_chg": 10.01
+            }
+          ]
+        },
+        {
+          "name": "公告",
+          "stock_count": 6,
+          "limit_up_count": 2,
+          "streak_count": 2,
+          "max_height": 3,
+          "total_amount_yi": 97.89,
+          "avg_pct_chg": 11.57,
+          "top_stocks": [
+            {
+              "code": "002560",
+              "name": "通达股份",
+              "day": 3,
+              "edition": 3,
+              "amount_yi": 27.09,
+              "pct_chg": 10.03
+            },
+            {
+              "code": "300834",
+              "name": "星辉环材",
+              "day": 3,
+              "edition": 3,
+              "amount_yi": 9.4,
+              "pct_chg": 20.01
+            },
+            {
+              "code": "002353",
+              "name": "杰瑞股份",
+              "day": 1,
+              "edition": 0,
+              "amount_yi": 43.35,
+              "pct_chg": 7.56
+            },
+            {
+              "code": "600249",
+              "name": "两面针",
+              "day": 1,
+              "edition": 0,
+              "amount_yi": 9.45,
+              "pct_chg": 1.85
+            },
+            {
+              "code": "000950",
+              "name": "重药控股",
+              "day": 1,
+              "edition": 0,
+              "amount_yi": 4.86,
+              "pct_chg": 10.0
+            }
+          ]
+        },
+        {
+          "name": "光通信",
+          "stock_count": 3,
+          "limit_up_count": 1,
+          "streak_count": 1,
+          "max_height": 10,
+          "total_amount_yi": 44.62,
+          "avg_pct_chg": 9.98,
+          "top_stocks": [
+            {
+              "code": "002309",
+              "name": "中利集团",
+              "day": 10,
+              "edition": 6,
+              "amount_yi": 35.68,
+              "pct_chg": 9.93
+            },
+            {
+              "code": "603042",
+              "name": "华脉科技",
+              "day": 1,
+              "edition": 0,
+              "amount_yi": 6.66,
+              "pct_chg": 10.01
+            },
+            {
+              "code": "000586",
+              "name": "汇源通信",
+              "day": 1,
+              "edition": 0,
+              "amount_yi": 2.28,
+              "pct_chg": 10.01
+            }
+          ]
+        },
+        {
+          "name": "美伊战争",
+          "stock_count": 9,
+          "limit_up_count": 0,
+          "streak_count": 0,
+          "max_height": 1,
+          "total_amount_yi": 129.47,
+          "avg_pct_chg": 9.2,
+          "top_stocks": [
+            {
+              "code": "601872",
+              "name": "招商轮船",
+              "day": 1,
+              "edition": 0,
+              "amount_yi": 64.28,
+              "pct_chg": 8.17
+            },
+            {
+              "code": "601975",
+              "name": "招商南油",
+              "day": 1,
+              "edition": 0,
+              "amount_yi": 29.18,
+              "pct_chg": 6.43
+            },
+            {
+              "code": "600339",
+              "name": "中油工程",
+              "day": 1,
+              "edition": 0,
+              "amount_yi": 9.29,
+              "pct_chg": 10.12
+            },
+            {
+              "code": "002051",
+              "name": "中工国际",
+              "day": 1,
+              "edition": 0,
+              "amount_yi": 8.65,
+              "pct_chg": 9.99
+            },
+            {
+              "code": "000593",
+              "name": "德龙汇能",
+              "day": 1,
+              "edition": 0,
+              "amount_yi": 6.12,
+              "pct_chg": 8.15
+            }
+          ]
+        },
+        {
+          "name": "其他",
+          "stock_count": 6,
+          "limit_up_count": 0,
+          "streak_count": 0,
+          "max_height": 1,
+          "total_amount_yi": 95.87,
+          "avg_pct_chg": 8.57,
+          "top_stocks": [
+            {
+              "code": "002471",
+              "name": "中超控股",
+              "day": 1,
+              "edition": 0,
+              "amount_yi": 43.35,
+              "pct_chg": 6.12
+            },
+            {
+              "code": "000762",
+              "name": "西藏矿业",
+              "day": 1,
+              "edition": 0,
+              "amount_yi": 19.82,
+              "pct_chg": 9.99
+            },
+            {
+              "code": "000155",
+              "name": "川能动力",
+              "day": 1,
+              "edition": 0,
+              "amount_yi": 14.64,
+              "pct_chg": 9.98
+            },
+            {
+              "code": "001208",
+              "name": "华菱线缆",
+              "day": 1,
+              "edition": 0,
+              "amount_yi": 9.87,
+              "pct_chg": 5.3
+            },
+            {
+              "code": "603477",
+              "name": "巨星农牧",
+              "day": 1,
+              "edition": 0,
+              "amount_yi": 5.72,
+              "pct_chg": 10.01
+            }
+          ]
+        }
+      ]
+    },
+    "action_trend": {
+      "daily": [
+        {
+          "date": "2026-03-20",
+          "limit_up_count": 11,
+          "streak_count": 11,
+          "max_height": 11,
+          "amount_yi": 752.27,
+          "top_sectors": [
+            "电力",
+            "其他",
+            "公告"
+          ]
+        },
+        {
+          "date": "2026-03-23",
+          "limit_up_count": 9,
+          "streak_count": 9,
+          "max_height": 12,
+          "amount_yi": 637.42,
+          "top_sectors": [
+            "电力",
+            "光伏",
+            "其他"
+          ]
+        },
+        {
+          "date": "2026-03-24",
+          "limit_up_count": 19,
+          "streak_count": 19,
+          "max_height": 13,
+          "amount_yi": 891.18,
+          "top_sectors": [
+            "电力",
+            "光伏",
+            "公告"
+          ]
+        },
+        {
+          "date": "2026-03-25",
+          "limit_up_count": 24,
+          "streak_count": 24,
+          "max_height": 14,
+          "amount_yi": 1021.49,
+          "top_sectors": [
+            "电力",
+            "大消费",
+            "光通信"
+          ]
+        },
+        {
+          "date": "2026-03-26",
+          "limit_up_count": 15,
+          "streak_count": 15,
+          "max_height": 13,
+          "amount_yi": 664.08,
+          "top_sectors": [
+            "电力",
+            "其他",
+            "锂电产业链"
+          ]
+        },
+        {
+          "date": "2026-03-27",
+          "limit_up_count": 21,
+          "streak_count": 21,
+          "max_height": 15,
+          "amount_yi": 1015.17,
+          "top_sectors": [
+            "电力",
+            "锂电产业链",
+            "医疗医药"
+          ]
+        },
+        {
+          "date": "2026-03-30",
+          "limit_up_count": 21,
+          "streak_count": 21,
+          "max_height": 12,
+          "amount_yi": 908.78,
+          "top_sectors": [
+            "光通信",
+            "商业航天",
+            "公告"
+          ]
+        },
+        {
+          "date": "2026-03-31",
+          "limit_up_count": 16,
+          "streak_count": 16,
+          "max_height": 12,
+          "amount_yi": 651.24,
+          "top_sectors": [
+            "电力",
+            "高铁轨交",
+            "大消费"
+          ]
+        },
+        {
+          "date": "2026-04-01",
+          "limit_up_count": 12,
+          "streak_count": 12,
+          "max_height": 11,
+          "amount_yi": 1002.26,
+          "top_sectors": [
+            "其他",
+            "公告",
+            "算力"
+          ]
+        },
+        {
+          "date": "2026-04-02",
+          "limit_up_count": 11,
+          "streak_count": 11,
+          "max_height": 10,
+          "amount_yi": 477.94,
+          "top_sectors": [
+            "医疗医药",
+            "电力",
+            "公告"
+          ]
+        }
+      ],
+      "sector_trends": [
+        {
+          "name": "公告",
+          "active_days": 10,
+          "stock_count": 52,
+          "avg_ret_3d": 5.1,
+          "avg_ret_5d": 11.26,
+          "avg_ret_10d": 14.46,
+          "avg_ret_20d": 16.56,
+          "amount_yi_latest": 97.89,
+          "amount_yi_trend": [
+            81.14,
+            239.02,
+            97.89
+          ],
+          "total_limit_ups": 16
+        },
+        {
+          "name": "其他",
+          "active_days": 10,
+          "stock_count": 80,
+          "avg_ret_3d": 1.1,
+          "avg_ret_5d": 5.54,
+          "avg_ret_10d": 8.83,
+          "avg_ret_20d": 10.7,
+          "amount_yi_latest": 95.87,
+          "amount_yi_trend": [
+            22.28,
+            184.45,
+            95.87
+          ],
+          "total_limit_ups": 19
+        },
+        {
+          "name": "电力",
+          "active_days": 8,
+          "stock_count": 58,
+          "avg_ret_3d": -5.4,
+          "avg_ret_5d": -9.31,
+          "avg_ret_10d": 1.26,
+          "avg_ret_20d": 9.32,
+          "amount_yi_latest": 57.71,
+          "amount_yi_trend": [
+            157.64,
+            65.33,
+            57.71
+          ],
+          "total_limit_ups": 44
+        },
+        {
+          "name": "医疗医药",
+          "active_days": 7,
+          "stock_count": 31,
+          "avg_ret_3d": 13.73,
+          "avg_ret_5d": 25.07,
+          "avg_ret_10d": 22.26,
+          "avg_ret_20d": 24.01,
+          "amount_yi_latest": 52.38,
+          "amount_yi_trend": [
+            47.75,
+            100.77,
+            52.38
+          ],
+          "total_limit_ups": 13
+        },
+        {
+          "name": "算力",
+          "active_days": 7,
+          "stock_count": 40,
+          "avg_ret_3d": -0.56,
+          "avg_ret_5d": 2.41,
+          "avg_ret_10d": 3.99,
+          "avg_ret_20d": 11.8,
+          "amount_yi_latest": 170.44,
+          "amount_yi_trend": [
+            46.58,
+            52.47,
+            170.44
+          ],
+          "total_limit_ups": 12
+        },
+        {
+          "name": "机器人",
+          "active_days": 5,
+          "stock_count": 17,
+          "avg_ret_3d": 0.69,
+          "avg_ret_5d": 2.96,
+          "avg_ret_10d": -0.98,
+          "avg_ret_20d": -0.7,
+          "amount_yi_latest": 4.96,
+          "amount_yi_trend": [
+            15.37,
+            6.93,
+            4.96
+          ],
+          "total_limit_ups": 0
+        },
+        {
+          "name": "光通信",
+          "active_days": 5,
+          "stock_count": 29,
+          "avg_ret_3d": 0.28,
+          "avg_ret_5d": 5.77,
+          "avg_ret_10d": 14.49,
+          "avg_ret_20d": 17.54,
+          "amount_yi_latest": 44.62,
+          "amount_yi_trend": [
+            80.23,
+            222.99,
+            44.62
+          ],
+          "total_limit_ups": 11
+        },
+        {
+          "name": "大消费",
+          "active_days": 4,
+          "stock_count": 19,
+          "avg_ret_3d": -1.11,
+          "avg_ret_5d": 3.59,
+          "avg_ret_10d": 5.84,
+          "avg_ret_20d": 8.21,
+          "amount_yi_latest": 50.46,
+          "amount_yi_trend": [
+            29.46,
+            20.15,
+            50.46
+          ],
+          "total_limit_ups": 8
+        },
+        {
+          "name": "锂电产业链",
+          "active_days": 4,
+          "stock_count": 30,
+          "avg_ret_3d": -2.91,
+          "avg_ret_5d": 5.55,
+          "avg_ret_10d": 15.62,
+          "avg_ret_20d": 11.64,
+          "amount_yi_latest": 15.19,
+          "amount_yi_trend": [
+            143.65,
+            340.98,
+            15.19
+          ],
+          "total_limit_ups": 4
+        },
+        {
+          "name": "光伏",
+          "active_days": 4,
+          "stock_count": 14,
+          "avg_ret_3d": -3.27,
+          "avg_ret_5d": -5.66,
+          "avg_ret_10d": 3.22,
+          "avg_ret_20d": 12.78,
+          "amount_yi_latest": 66.9,
+          "amount_yi_trend": [
+            147.45,
+            28.23,
+            66.9
+          ],
+          "total_limit_ups": 8
+        },
+        {
+          "name": "化工",
+          "active_days": 4,
+          "stock_count": 18,
+          "avg_ret_3d": -4.75,
+          "avg_ret_5d": 3.56,
+          "avg_ret_10d": 2.23,
+          "avg_ret_20d": 5.63,
+          "amount_yi_latest": 31.78,
+          "amount_yi_trend": [
+            15.41,
+            54.67,
+            31.78
+          ],
+          "total_limit_ups": 6
+        },
+        {
+          "name": "福建",
+          "active_days": 3,
+          "stock_count": 6,
+          "avg_ret_3d": 5.23,
+          "avg_ret_5d": 15.27,
+          "avg_ret_10d": 14.95,
+          "avg_ret_20d": 4.07,
+          "amount_yi_latest": 75.75,
+          "amount_yi_trend": [
+            36.13,
+            63.15,
+            75.75
+          ],
+          "total_limit_ups": 4
+        },
+        {
+          "name": "商业航天",
+          "active_days": 3,
+          "stock_count": 17,
+          "avg_ret_3d": 3.21,
+          "avg_ret_5d": 11.75,
+          "avg_ret_10d": 11.11,
+          "avg_ret_20d": 18.07,
+          "amount_yi_latest": 179.14,
+          "amount_yi_trend": [
+            128.97,
+            181.79,
+            179.14
+          ],
+          "total_limit_ups": 6
+        },
+        {
+          "name": "美伊战争",
+          "active_days": 3,
+          "stock_count": 20,
+          "avg_ret_3d": 2.74,
+          "avg_ret_5d": 3.18,
+          "avg_ret_10d": 8.84,
+          "avg_ret_20d": 3.82,
+          "amount_yi_latest": 129.47,
+          "amount_yi_trend": [
+            70.49,
+            78.41,
+            129.47
+          ],
+          "total_limit_ups": 0
+        },
+        {
+          "name": "AI硬件",
+          "active_days": 3,
+          "stock_count": 24,
+          "avg_ret_3d": 0.44,
+          "avg_ret_5d": 4.21,
+          "avg_ret_10d": 9.06,
+          "avg_ret_20d": 11.7,
+          "amount_yi_latest": 188.48,
+          "amount_yi_trend": [
+            142.46,
+            26.91,
+            188.48
+          ],
+          "total_limit_ups": 2
+        },
+        {
+          "name": "国产芯片",
+          "active_days": 3,
+          "stock_count": 12,
+          "avg_ret_3d": -3.98,
+          "avg_ret_5d": 0.42,
+          "avg_ret_10d": 1.07,
+          "avg_ret_20d": 0.37,
+          "amount_yi_latest": 26.86,
+          "amount_yi_trend": [
+            20.62,
+            36.0,
+            26.86
+          ],
+          "total_limit_ups": 1
+        },
+        {
+          "name": "两轮车",
+          "active_days": 2,
+          "stock_count": 6,
+          "avg_ret_3d": 5.28,
+          "avg_ret_5d": 12.39,
+          "avg_ret_10d": 11.61,
+          "avg_ret_20d": 10.67,
+          "amount_yi_latest": 22.82,
+          "amount_yi_trend": [
+            15.57,
+            22.82
+          ],
+          "total_limit_ups": 1
+        }
+      ]
+    },
+    "sector_clusters_hint": "svk analyze 000155 000586 000720 000762 000788 000950 000968 002038 002051 002263 002309 002560 002828 300834 300839 600339 600488 600594 600644 603042 603122 603222 603353 603477 603798 603863 605162 920047 920088 920230 920367 300086 301188 688336 688618 300667 300547 688143 688553 300632 601872 601869 300255 600829 688090 688805 002353 300055 301408 002437 -k 5 --top 5"
+  },
+  "strategy_quant": {
+    "candidates_by_strategy": {
+      "trend_revaluation": [],
+      "new_mainline_breakout": [],
+      "main_rise_resonance": [],
+      "mainline_low_absorption": [],
+      "ice_repair": [],
+      "catchup_rotation": [],
+      "fast_rotation_scalp": [
+        {
+          "score": 80.46428386880181,
+          "symbol": "920230",
+          "name": "欧康医药",
+          "primary_theme": "西部大开发",
+          "theme_support_score": 58.332946229339385,
+          "pct_chg": 29.9822,
+          "limit_up_streak": 1,
+          "rs_5": 0.32061511357369876,
+          "rs_20": 0.21284465989505397,
+          "close_vs_ma20": 0.24823785723439706,
+          "amount_vs_ma5": 4.002216750798186,
+          "open_strength": NaN,
+          "first_5m_return": NaN,
+          "morning_rebound": NaN,
+          "intraday_support_signal": false,
+          "market_cap_total_e8": null
+        },
+        {
+          "score": 58.44898630662742,
+          "symbol": "300086",
+          "name": "康芝药业",
+          "primary_theme": "创新药",
+          "theme_support_score": 77.7566210220914,
+          "pct_chg": 16.061,
+          "limit_up_streak": 0,
+          "rs_5": 0.21555895517097423,
+          "rs_20": 0.16876924618389144,
+          "close_vs_ma20": 0.15015974440894575,
+          "amount_vs_ma5": 3.192681350361345,
+          "open_strength": NaN,
+          "first_5m_return": NaN,
+          "morning_rebound": NaN,
+          "intraday_support_signal": false,
+          "market_cap_total_e8": null
+        },
+        {
+          "score": 57.70101355018313,
+          "symbol": "300834",
+          "name": "星辉环材",
+          "primary_theme": "专精特新",
+          "theme_support_score": 48.966711833943755,
+          "pct_chg": 20.0055,
+          "limit_up_streak": 3,
+          "rs_5": 0.8981260644209745,
+          "rs_20": 0.8679971303182166,
+          "close_vs_ma20": 0.6536750446785049,
+          "amount_vs_ma5": 2.2531383532866265,
+          "open_strength": NaN,
+          "first_5m_return": NaN,
+          "morning_rebound": NaN,
+          "intraday_support_signal": false,
+          "market_cap_total_e8": null
+        },
+        {
+          "score": 57.66121355018313,
+          "symbol": "300839",
+          "name": "博汇股份",
+          "primary_theme": "专精特新",
+          "theme_support_score": 48.966711833943755,
+          "pct_chg": 19.9856,
+          "limit_up_streak": 1,
+          "rs_5": 0.3375630163847949,
+          "rs_20": 0.22147570819060602,
+          "close_vs_ma20": 0.23159797808360727,
+          "amount_vs_ma5": 1.78194056816542,
+          "open_strength": NaN,
+          "first_5m_return": NaN,
+          "morning_rebound": NaN,
+          "intraday_support_signal": false,
+          "market_cap_total_e8": null
+        },
+        {
+          "score": 53.15598630662742,
+          "symbol": "688336",
+          "name": "三生国健",
+          "primary_theme": "创新药",
+          "theme_support_score": 77.7566210220914,
+          "pct_chg": 13.4145,
+          "limit_up_streak": 0,
+          "rs_5": 0.2746512087041506,
+          "rs_20": 0.680113499673241,
+          "close_vs_ma20": 0.34277245815907365,
+          "amount_vs_ma5": 1.5099532351563725,
+          "open_strength": NaN,
+          "first_5m_return": NaN,
+          "morning_rebound": NaN,
+          "intraday_support_signal": false,
+          "market_cap_total_e8": null
+        }
+      ],
+      "mispriced_recovery": []
+    },
+    "top_candidates": [
+      {
+        "score": 80.46428386880181,
+        "symbol": "920230",
+        "name": "欧康医药",
+        "primary_theme": "西部大开发",
+        "theme_support_score": 58.332946229339385,
+        "pct_chg": 29.9822,
+        "limit_up_streak": 1,
+        "rs_5": 0.32061511357369876,
+        "rs_20": 0.21284465989505397,
+        "close_vs_ma20": 0.24823785723439706,
+        "amount_vs_ma5": 4.002216750798186,
+        "open_strength": NaN,
+        "first_5m_return": NaN,
+        "morning_rebound": NaN,
+        "intraday_support_signal": false,
+        "market_cap_total_e8": null,
+        "strategy": "fast_rotation_scalp"
+      },
+      {
+        "score": 58.44898630662742,
+        "symbol": "300086",
+        "name": "康芝药业",
+        "primary_theme": "创新药",
+        "theme_support_score": 77.7566210220914,
+        "pct_chg": 16.061,
+        "limit_up_streak": 0,
+        "rs_5": 0.21555895517097423,
+        "rs_20": 0.16876924618389144,
+        "close_vs_ma20": 0.15015974440894575,
+        "amount_vs_ma5": 3.192681350361345,
+        "open_strength": NaN,
+        "first_5m_return": NaN,
+        "morning_rebound": NaN,
+        "intraday_support_signal": false,
+        "market_cap_total_e8": null,
+        "strategy": "fast_rotation_scalp"
+      },
+      {
+        "score": 57.70101355018313,
+        "symbol": "300834",
+        "name": "星辉环材",
+        "primary_theme": "专精特新",
+        "theme_support_score": 48.966711833943755,
+        "pct_chg": 20.0055,
+        "limit_up_streak": 3,
+        "rs_5": 0.8981260644209745,
+        "rs_20": 0.8679971303182166,
+        "close_vs_ma20": 0.6536750446785049,
+        "amount_vs_ma5": 2.2531383532866265,
+        "open_strength": NaN,
+        "first_5m_return": NaN,
+        "morning_rebound": NaN,
+        "intraday_support_signal": false,
+        "market_cap_total_e8": null,
+        "strategy": "fast_rotation_scalp"
+      }
+    ]
+  }
+}

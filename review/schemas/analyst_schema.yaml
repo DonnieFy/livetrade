@@ -1,0 +1,54 @@
+date:
+  type: string
+  description: 对应复盘日期
+
+market_regime:
+  type: enum
+  values: [trend_up, trend_down, range, range_weak, range_strong, ""]
+  description: 市场大势定性
+
+emotion_phase:
+  type: enum
+  values: [ice, repair, warming, hot, cooling, ""]
+  description: 情绪周期判断
+
+trend_bias:
+  type: enum
+  values: [bullish, neutral, bearish, ""]
+  description: 次日偏多偏空倾向
+
+is_ice_point:
+  type: boolean_or_null
+  description: 是否明确判断为冰点环境
+
+main_themes:
+  type: list
+  description: 主线或重点题材
+
+secondary_themes:
+  type: list
+  description: 次级关注题材
+
+avoid_themes:
+  type: list
+  description: 明确回避方向
+
+active_strategies:
+  type: list
+  description: 次日优先启用策略
+
+focus_watchlist:
+  type: list
+  description: 次日重点观察个股
+
+tomorrow_observation_points:
+  type: list
+  description: 次日盘中核心观察锚点
+
+risk_notes:
+  type: list
+  description: 可能导致判断失效的风险
+
+manual_overrides:
+  type: mapping
+  description: 手工覆盖策略候选池与启停

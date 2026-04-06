@@ -1,0 +1,39 @@
+date: '2026-03-31'
+market_regime: range_weak
+emotion_phase: cooling
+trend_bias: bearish
+is_ice_point: false
+main_themes:
+- name: 商业航天
+  stance: main
+  note: 观察是否接力成新主线
+secondary_themes:
+- name: 高铁
+  stance: watch
+  note: 看延续
+avoid_themes:
+- 光伏
+active_strategies:
+- slug: trend_breakout
+  priority: 1
+  reason: 主线分歧日优先看趋势低吸
+focus_watchlist:
+- symbol: 002082
+  name: 万邦德
+  tags:
+  - 医药
+  - 趋势核心
+  strategy: trend_breakout
+  note: 回踩承接观察
+tomorrow_observation_points:
+- 最高标能否突破压制
+risk_notes:
+- 指数若继续放量下杀则转防守
+manual_overrides:
+  strategy_candidates:
+    trend_breakout:
+    - 002082
+    - '600488'
+  strategy_excludes:
+    ice_point_repair:
+    - all

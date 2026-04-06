@@ -1,0 +1,52 @@
+date: "2026-03-31"
+
+market_regime: "range_weak"
+emotion_phase: "cooling"
+trend_bias: "bearish"
+is_ice_point: false
+
+main_themes:
+  - name: "商业航天"
+    stance: "main"
+    note: "有催化，观察是否接力成新主线"
+
+secondary_themes:
+  - name: "高铁"
+    stance: "watch"
+    note: "新发酵，观察延续"
+
+avoid_themes:
+  - "光伏"
+
+active_strategies:
+  - slug: "trend_breakout"
+    priority: 1
+    reason: "主线分歧日，优先做趋势核心低吸"
+  - slug: "auction_limit_chase"
+    priority: 2
+    reason: "竞价阶段只关注最强涨停加单"
+
+focus_watchlist:
+  - symbol: "002361"
+    name: "神剑股份"
+    tags: ["商业航天", "最高标"]
+    strategy: "auction_strength"
+    note: "看竞价是否超预期"
+  - symbol: "002082"
+    name: "万邦德"
+    tags: ["医药", "趋势核心"]
+    strategy: "trend_breakout"
+    note: "看分歧承接"
+
+tomorrow_observation_points:
+  - "最高标能否突破压制高度"
+  - "红盘率能否显著回升"
+
+risk_notes:
+  - "若指数继续放量下杀则转防守"
+
+manual_overrides:
+  strategy_candidates:
+    trend_breakout: ["002082", "600488"]
+  strategy_excludes:
+    ice_point_repair: ["all"]

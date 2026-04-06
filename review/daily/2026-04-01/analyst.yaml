@@ -1,0 +1,64 @@
+date: '2026-04-01'
+market_regime: range_strong
+emotion_phase: warming
+trend_bias: bullish
+is_ice_point: false
+main_themes:
+- name: 创新药
+  stance: main
+  note: 量化候选最集中，万邦德、凯莱英、广生堂、睿智医药等形成趋势与弹性共振
+- name: 算力
+  stance: watch
+  note: 持续活跃天数高，但今日更多体现为反弹与公告驱动，接力质量一般
+secondary_themes:
+- name: AI硬件
+  stance: watch
+  note: 有异动但封板质量一般，观察是否转强
+- name: 电力
+  stance: watch
+  note: 持续活跃但今天不是最强交易方向
+avoid_themes:
+- 纯公告套利
+active_strategies:
+- slug: trend_breakout
+  priority: 1
+  reason: 市场广度强、医药趋势核心密集，适合做强趋势与分歧低吸
+focus_watchlist:
+- symbol: 002082
+  name: 万邦德
+  tags:
+  - 创新药
+  - 趋势核心
+  strategy: trend_breakout
+  note: 量化总分最高之一，观察分歧承接与再放量
+- symbol: 002821
+  name: 凯莱英
+  tags:
+  - 创新药
+  - 机构趋势
+  strategy: trend_breakout
+  note: 2板+大市值辨识度，观察是否成为医药中军
+- symbol: '600488'
+  name: 津药药业
+  tags:
+  - 创新药
+  - 高标
+  strategy: trend_breakout
+  note: 4板高标，重点看能否打破高度压制
+tomorrow_observation_points:
+- 红盘率能否继续维持在60%以上而不是冲高回落
+- 医药核心是否继续放量走强并形成中军+弹性共振
+- 津药药业能否冲击5板，打破当前4板压制
+- 炸板率能否从42.4%明显收敛
+risk_notes:
+- 今天是普涨修复但封板率仅57.6%，说明短线接力质量偏弱
+- 首板溢价为-0.82%，若明早竞价继续走弱，需防止情绪修复失败
+manual_overrides:
+  strategy_candidates:
+    trend_breakout:
+    - 002082
+    - 002821
+    - '600488'
+  strategy_excludes:
+    ice_point_repair:
+    - all

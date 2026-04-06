@@ -1,0 +1,64 @@
+date: '2026-04-02'
+market_regime: ice_point
+emotion_phase: ice_point
+trend_bias: bearish
+is_ice_point: true
+main_themes:
+- name: 医疗医药
+  stance: main
+  note: 5家涨停、最高5板（津药药业），板块3日均值+13.73%/5日+25.07%，最强动量方向
+secondary_themes:
+- name: 美伊战争
+  stance: watch
+  note: 9只个股129亿成交，招商轮船64亿+中油工程涨停，新题材起步阶段需确认持续性
+- name: 光通信
+  stance: watch
+  note: 中利集团涨停但仅1板，板块成交从223亿缩至45亿，退潮迹象明显
+avoid_themes:
+- 电力
+- 锂电产业链
+active_strategies:
+- slug: auction_limit_chase
+  priority: 1
+  reason: 冰点日稀缺涨停辨识度高，竞价封单信号更可靠；冰点修复股次日溢价预期强
+focus_watchlist:
+- symbol: '600488'
+  name: 津药药业
+  tags:
+  - 医疗医药
+  - 5板高标
+  strategy: auction_limit_chase
+  note: 打破4板天花板，医药情绪锚，关注竞价封单强度
+- symbol: 002038
+  name: 双鹭药业
+  tags:
+  - 医疗医药
+  - 首板
+  strategy: auction_limit_chase
+  note: 异动第7天首次涨停，板块辨识度高，看竞价是否加速
+- symbol: 601872
+  name: 招商轮船
+  tags:
+  - 美伊战争
+  - 大市值
+  strategy: auction_limit_chase
+  note: 64亿成交炸板8.17%，若美伊局势升级则可能缩量加速
+tomorrow_observation_points:
+- 红盘率能否从19.2%回升至40%以上确认冰点修复
+- 医疗医药能否继续维持3家以上涨停，津药药业是否断板
+- 美伊战争题材是否有持续性（看竞价是否有新标的加入）
+- 成交额是否继续萎缩跌破18000亿
+risk_notes:
+- 典型冰点结构：19.2%红盘率+28涨停+41.7%炸板率，情绪极度低迷
+- 五大指数全跌，创业板指-2.31%领跌，市场无做多方向
+- 缩量至18578亿，资金持续流出
+manual_overrides:
+  strategy_candidates:
+    auction_limit_chase:
+    - '600488'
+    - 002038
+    - 601872
+  strategy_excludes:
+    trend_breakout:
+    - all
+    ice_point_repair: []

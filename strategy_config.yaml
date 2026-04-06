@@ -1,0 +1,76 @@
+# 策略运行配置 — 每日复盘后更新
+# 日期标识：用于确认配置是否已更新到最新
+date: "2026-04-02"
+
+strategies:
+  # ======================================================
+  # 产业趋势突破策略 (暂时禁用)
+  # ======================================================
+  trend_breakout:
+    enabled: false
+    phases: ["trading"]
+    time_range: ["09:30", "14:57"]
+    candidates: []
+    params:
+      breakout_pct: 0.02
+      lookback_ticks: 10
+      min_amount: 0
+
+  # ======================================================
+  # 竞价强度异动策略 (暂时禁用)
+  # ======================================================
+  auction_strength:
+    enabled: false
+    phases: ["auction_open"]
+    time_range: null
+    candidates: []
+    params:
+      vol_multiple_threshold: 2.0
+      min_bid_ask_ratio: 1.5
+      min_open_strength: 0.02
+
+  # ======================================================
+  # 冰点修复策略 (暂时禁用)
+  # ======================================================
+  ice_point_repair:
+    enabled: false
+    phases: ["trading", "auction_close"]
+    time_range: null
+    candidates: []
+    params:
+      min_reversal_pct: 3.0
+      min_volume_surge: 2.0
+
+  # ======================================================
+  # 竞价涨停加单策略 ★ 新策略
+  # ======================================================
+  auction_limit_chase:
+    enabled: true
+    phases: ["auction_open"]             # 仅竞价开盘阶段
+    time_range: null                      # 策略内部自行区分 9:20 前后
+    candidates:                           # 冰点日稀缺涨停，重点跟踪
+      - "600488"   # 津药药业 — 5板破天花板，医药情绪锚
+      - "002038"   # 双鹭药业 — 异动7天首板，医药辨识度高，看是否加速
+      - "601872"   # 招商轮船 — 美伊战争64亿炸板，看是否有二板
+    params:
+      seal_threshold: 30000000            # 条件3: 稳态大封阈值 (3000万)
+      sudden_increase_threshold: 20000000 # 条件1: 单帧巨量增加阈值 (2000万)
+      accel_min_ticks: 3                  # 条件2: 加速判断最少连续递增帧数
+      exclude_threshold: 50000000         # 排除: 封单基准值 min(pre920_last, post920_first) 超此值
+
+  # ======================================================
+  # 首板1进2策略 ★ 新策略
+  # ======================================================
+  first_board_1to2:
+    enabled: true
+    phases: ["auction_open"]             # 仅竞价开盘阶段
+    time_range: null
+    candidates: []                        # 留空表示全市场扫描
+    params:
+      lookback_days: 10                   # 首板前回看天数
+      volatility_threshold: 4.0           # 首板前涨跌幅阈值（±4%）
+      max_amount_yi: 15.0                 # 最大成交额（亿元）
+      auction_amount_ratio_min: 0.10      # 竞价金额比例最小值（1/10）
+      auction_amount_ratio_max: 0.125     # 竞价金额比例最大值（1/8）
+      min_open_strength: 0.02             # 最小高开幅度（2%）
+      top_n: 3                           # 输出TOP N

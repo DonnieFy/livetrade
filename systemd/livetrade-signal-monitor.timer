@@ -1,0 +1,9 @@
+[Unit]
+Description=Start Livetrade Signal Monitor Mon-Fri 09:15
+
+[Timer]
+OnCalendar=Mon..Fri 09:15
+Persistent=true
+
+[Install]
+WantedBy=timers.target

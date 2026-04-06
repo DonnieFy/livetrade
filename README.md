@@ -111,9 +111,52 @@ class MyStrategy(BaseStrategy):
 2. 再执行 `python -m review.analyst --date YYYY-MM-DD --from-json /tmp/analyst_update.json`
 3. 最后生成 `review.md`
 
-## 信号输出格式
-
 ```
 [产业趋势突破] sh600000 浦发银行 | 突破20日新高 15.20→15.60, 涨幅2.63%
 [竞价强度异动] sz300750 宁德时代 | 昨日涨停今日高开3.5%, 买盘积极(比2.1)
+```
+
+## 信号监控服务
+
+基于 Linux 内核 `inotify` 的轻量级文件监控，当策略引擎输出信号文件时，通过 **QQ Bot REST API** 实时推送到你的 QQ。
+
+**核心特性：**
+- 0 token 运行成本（纯系统调用 + HTTP REST API）
+- Linux 内核级 inotify 事件驱动（非轮询）
+- QQ Bot API 直连（~100ms 延迟），不依赖 OpenClaw Gateway
+- access_token 自动缓存与刷新，支持全天运行
+- systemd timer 周一至周五 09:15 自动启动，15:05 自动退出
+
+### 快速使用
+
+```bash
+# 1. 配置 QQ Bot 凭证
+cp .env.example .env
+nano .env  # 填写 QQBOT_CLIENT_SECRET 和 QQBOT_TARGET_OPENID
+
+# 2. 安装依赖
+pip install inotify_simple
+
+# 3. 测试通知通道
+python signal_monitor.py --test
+
+# 4. 手动启动监控
+python signal_monitor.py
+
+# 5. 一键安装 systemd 定时任务（可选）
+bash scripts/install_monitor.sh
+```
+
+### 相关文件
+
+```
+├── signal_monitor.py          # inotify 监控主脚本
+├── notifier.py                # QQ Bot REST API 直连客户端
+├── .env                       # QQ Bot 凭证（不入 git）
+├── .env.example               # 凭证模板
+├── systemd/                   # systemd 服务单元
+│   ├── livetrade-signal-monitor.service
+│   └── livetrade-signal-monitor.timer
+└── scripts/
+    └── install_monitor.sh     # 一键部署脚本
 ```

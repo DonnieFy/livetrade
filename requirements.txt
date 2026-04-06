@@ -1,3 +1,4 @@
 pyyaml
 pandas
 numpy
+inotify_simple

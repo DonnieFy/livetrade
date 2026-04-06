@@ -1,0 +1,16 @@
+[Unit]
+Description=Livetrade Signal File Monitor (inotify + QQ Bot)
+Documentation=file:///home/fy/myown/livetrade/README.md
+
+[Service]
+Type=simple
+WorkingDirectory=/home/fy/myown/livetrade
+ExecStart=/usr/bin/python3 /home/fy/myown/livetrade/signal_monitor.py
+Restart=no
+StandardOutput=journal
+StandardError=journal
+
+# 安全限制
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/home/fy/myown/livetrade/output /home/fy/myown/livetrade/logs

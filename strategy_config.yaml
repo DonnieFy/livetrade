@@ -45,7 +45,7 @@ strategies:
   # 竞价涨停加单策略 ★ 新策略
   # ======================================================
   auction_limit_chase:
-    enabled: true
+    enabled: false
     phases: ["auction_open"]             # 仅竞价开盘阶段
     time_range: null                      # 策略内部自行区分 9:20 前后
     candidates:                           # 冰点日稀缺涨停，重点跟踪
@@ -59,10 +59,19 @@ strategies:
       exclude_threshold: 50000000         # 排除: 封单基准值 min(pre920_last, post920_first) 超此值
 
   # ======================================================
+  # 盘面脉搏策略 ★
+  # ======================================================
+  market_pulse:
+    enabled: true
+    phases: ["auction_open", "trading"]    # T1(竞价) + T2/T3(交易)
+    time_range: null                        # 策略内部按时间点控制
+    candidates: []                          # 全市场扫描，无需候选股
+
+  # ======================================================
   # 首板1进2策略 ★ 新策略
   # ======================================================
   first_board_1to2:
-    enabled: true
+    enabled: false
     phases: ["auction_open"]             # 仅竞价开盘阶段
     time_range: null
     candidates: []                        # 留空表示全市场扫描

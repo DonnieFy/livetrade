@@ -17,10 +17,7 @@ secondary_themes:
 avoid_themes:
 - 电力
 - 锂电产业链
-active_strategies:
-- slug: auction_limit_chase
-  priority: 1
-  reason: 冰点日稀缺涨停辨识度高，竞价封单信号更可靠；冰点修复股次日溢价预期强
+active_strategies: []
 focus_watchlist:
 - symbol: '600488'
   name: 津药药业

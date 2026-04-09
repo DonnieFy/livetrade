@@ -8,3 +8,4 @@ logs/
 *.egg-info/
 strategy_example/
 .env
+review/daily/

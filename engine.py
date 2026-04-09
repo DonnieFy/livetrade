@@ -108,8 +108,11 @@ class Engine:
         # 每股静态/缓变快照
         self._stock_snapshots: dict[str, StockSnapshot] = {}
 
-        # 瘦时序历史
-        self._tick_history = pd.DataFrame(columns=TICK_TS_COLUMNS)
+        # 瘦时序历史（用 list 缓存，避免逐帧 pd.concat）
+        self._tick_history_chunks: list[pd.DataFrame] = []
+        self._tick_history: pd.DataFrame = pd.DataFrame(columns=TICK_TS_COLUMNS)
+        self._tick_history_dirty = False
+        self._tick_history_total_rows = 0
 
         # 自动发现并加载策略
         _auto_discover_strategies()
@@ -139,8 +142,10 @@ class Engine:
             enabled_in_config = strat_config.get("enabled", True)
             if active_from_review:
                 if slug not in active_from_review:
-                    logger.info(f"策略 '{slug}' 不在 analyst.active_strategies 中，跳过")
-                    continue
+                    # 回测模式下 enabled: true 可覆盖 analyst 的 active_strategies 限制
+                    if not (self.backtest and enabled_in_config):
+                        logger.info(f"策略 '{slug}' 不在 analyst.active_strategies 中，跳过")
+                        continue
             elif not enabled_in_config:
                 logger.info(f"策略 '{slug}' 已禁用，跳过")
                 continue
@@ -239,14 +244,15 @@ class Engine:
                 except Exception as e:
                     logger.error(f"[{strat.slug}] on_phase_start 异常: {e}")
 
-        # ---- 衍生列计算（在原始 frame 上）----
-        raw_df = calc_pct_change(raw_df)
-        raw_df = calc_limit_up_price(raw_df)
+        # ---- 衍生列计算（回测模式已在 ReplayWatcher 预计算，实盘仍需逐帧计算）----
+        if not self.backtest:
+            raw_df = calc_pct_change(raw_df)
+            raw_df = calc_limit_up_price(raw_df)
 
         # ---- 更新每股快照 ----
         self._update_snapshots(raw_df)
 
-        # ---- 构建瘦时序行并追加到 tick_history ----
+        # ---- 构建瘦时序行并追加到 tick_history（list 缓存，避免逐帧 concat）----
         is_auction = phase in (config.PHASE_AUCTION_OPEN, config.PHASE_AUCTION_CLOSE)
         ts_cols = TICK_TS_COLUMNS[:]
         if is_auction:
@@ -254,12 +260,28 @@ class Engine:
         available_cols = [c for c in ts_cols if c in raw_df.columns]
         slim_df = raw_df[available_cols].copy()
 
-        MAX_HISTORY_ROWS = 500_000  # 瘦列后同样内存可存更多行
-        self._tick_history = pd.concat(
-            [self._tick_history, slim_df], ignore_index=True
-        )
-        if len(self._tick_history) > MAX_HISTORY_ROWS:
-            self._tick_history = self._tick_history.iloc[-MAX_HISTORY_ROWS:].reset_index(drop=True)
+        MAX_HISTORY_ROWS = 500_000
+        self._tick_history_chunks.append(slim_df)
+        self._tick_history_total_rows += len(slim_df)
+        self._tick_history_dirty = True
+
+        # 超限时截断旧 chunk
+        if self._tick_history_total_rows > MAX_HISTORY_ROWS:
+            kept = []
+            remaining = self._tick_history_total_rows
+            for chunk in self._tick_history_chunks:
+                if remaining - len(chunk) > MAX_HISTORY_ROWS:
+                    remaining -= len(chunk)
+                    continue
+                if remaining > MAX_HISTORY_ROWS:
+                    excess = remaining - MAX_HISTORY_ROWS
+                    kept.append(chunk.iloc[excess:].reset_index(drop=True))
+                    remaining = MAX_HISTORY_ROWS
+                else:
+                    kept.append(chunk)
+            self._tick_history_chunks = kept
+            self._tick_history_total_rows = min(self._tick_history_total_rows, MAX_HISTORY_ROWS)
+            self._tick_history_dirty = True
 
         # ---- 更新 MarketContext ----
         self.market_ctx.update_from_snapshots(self._stock_snapshots, phase, tick_time)
@@ -285,7 +307,12 @@ class Engine:
                 except (ValueError, IndexError):
                     pass
 
-            # 更新上下文引用
+            # 更新上下文引用（lazy merge tick_history）
+            if self._tick_history_dirty:
+                self._tick_history = pd.concat(
+                    self._tick_history_chunks, ignore_index=True
+                )
+                self._tick_history_dirty = False
             ctx.tick_history = self._tick_history
             ctx.stock_snapshots = self._stock_snapshots
 
@@ -309,18 +336,30 @@ class Engine:
             self.alert_writer.write(all_alerts, tick_time)
 
     def _update_snapshots(self, frame: pd.DataFrame) -> None:
-        """从原始 frame 更新每股快照。"""
-        for _, row in frame.iterrows():
-            code = row["code"]
-            now_price = row["now"]
-            close_price = row["close"]  # 昨收
+        """从原始 frame 更新每股快照（向量化优化版）。"""
+        codes = frame["code"].values
+        nows = frame["now"].values
+        closes = frame["close"].values
+        names = frame["name"].values if "name" in frame.columns else None
+        volumes = frame["volume"].values if "volume" in frame.columns else None
+        turnovers = frame["turnover"].values if "turnover" in frame.columns else None
+        pct_chgs = frame["pct_chg"].values if "pct_chg" in frame.columns else None
+        is_lus = frame["is_limit_up"].values if "is_limit_up" in frame.columns else None
+        is_lds = frame["is_limit_down"].values if "is_limit_down" in frame.columns else None
 
-            snap = self._stock_snapshots.get(code)
+        snapshots = self._stock_snapshots
+
+        for i in range(len(codes)):
+            code = codes[i]
+            now_price = nows[i]
+            close_price = closes[i]
+
+            snap = snapshots.get(code)
             if snap is None:
                 lr = _limit_ratio(code)
                 snap = StockSnapshot(
                     code=code,
-                    name=row["name"],
+                    name=names[i] if names is not None else "",
                     close=close_price,
                     open=now_price,
                     high=now_price,
@@ -328,15 +367,20 @@ class Engine:
                     limit_up_price=round(close_price * (1 + lr), 2),
                     limit_down_price=round(close_price * (1 - lr), 2),
                 )
-                self._stock_snapshots[code] = snap
+                snapshots[code] = snap
 
             # 更新缓变字段
             if now_price > snap.high:
                 snap.high = now_price
             if now_price < snap.low:
                 snap.low = now_price
-            snap.volume = row.get("volume", 0)  # 成交额（累计值）
-            snap.turnover = row.get("turnover", 0)
-            snap.pct_chg = row.get("pct_chg", 0)
-            snap.is_limit_up = row.get("is_limit_up", False)
-            snap.is_limit_down = row.get("is_limit_down", False)
+            if volumes is not None:
+                snap.volume = volumes[i]
+            if turnovers is not None:
+                snap.turnover = turnovers[i]
+            if pct_chgs is not None:
+                snap.pct_chg = pct_chgs[i]
+            if is_lus is not None:
+                snap.is_limit_up = bool(is_lus[i])
+            if is_lds is not None:
+                snap.is_limit_down = bool(is_lds[i])

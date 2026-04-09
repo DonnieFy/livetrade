@@ -21,6 +21,7 @@ from typing import Callable
 import pandas as pd
 
 import config
+import numpy as np
 from tick_parser import parse_csv_text, extract_tick_time
 
 logger = logging.getLogger(__name__)
@@ -110,7 +111,10 @@ class TickWatcher:
 
 
 class ReplayWatcher:
-    """回测/回放模式 — 将历史 .csv.gz 按帧模拟回调。"""
+    """回测/回放模式 — 将历史 .csv.gz 按帧模拟回调。
+
+    优化策略：一次性加载整个文件并预计算衍生列，避免逐帧重复计算。
+    """
 
     def __init__(self, date_string: str, callback: OnNewRowsCallback,
                  data_dir: str | None = None):
@@ -128,7 +132,7 @@ class ReplayWatcher:
         logger.info("ReplayWatcher 回放完成")
 
     def _replay_phase(self, phase: str) -> None:
-        """回放单个阶段的数据文件（支持大文件分块读取）。"""
+        """回放单个阶段 — 一次性加载 + 预计算 + 按帧回调。"""
         gz_path = os.path.join(
             self.data_dir, f"{self.date_string}_{phase}.csv.gz"
         )
@@ -148,61 +152,82 @@ class ReplayWatcher:
             logger.warning(f"[{phase}] 无数据文件")
             return
 
-        # 使用 pandas 分块读取，每次读 50000 行（约 10 帧 × 5000 股）
-        CHUNK_SIZE = 50000
-        frame_count = 0
-        pending_rows = pd.DataFrame()  # 跨 chunk 边界的未完成帧
+        import time as _time
+        t0 = _time.time()
 
+        # 一次性加载整个文件
         try:
-            reader = pd.read_csv(
+            df = pd.read_csv(
                 file_path,
                 names=config.CSV_COLUMNS,
                 header=None,
                 compression=compression,
-                chunksize=CHUNK_SIZE,
-                dtype=str,  # 先全部读为字符串，parse 时再转
+                dtype=str,
             )
         except Exception as e:
             logger.error(f"[{phase}] 打开文件失败: {e}")
             return
 
-        for chunk in reader:
-            # 数值列类型转换
-            for col in config.NUMERIC_COLUMNS:
-                if col in chunk.columns:
-                    chunk[col] = pd.to_numeric(chunk[col], errors="coerce")
+        if df.empty:
+            return
 
-            # 合并上一 chunk 遗留的不完整帧
-            if not pending_rows.empty:
-                chunk = pd.concat([pending_rows, chunk], ignore_index=True)
-                pending_rows = pd.DataFrame()
+        t_load = _time.time()
 
-            if "time" not in chunk.columns or chunk.empty:
-                continue
+        # 批量转换数值列（一次性，替代逐帧 to_numeric）
+        numeric_cols_present = [c for c in config.NUMERIC_COLUMNS if c in df.columns]
+        # 用 numpy 批量转换，避免逐列 pd.to_numeric 开销
+        for col in numeric_cols_present:
+            arr = df[col].values
+            try:
+                df[col] = arr.astype(np.float64)
+            except (ValueError, TypeError):
+                df[col] = pd.to_numeric(arr, errors="coerce")
 
-            # 最后一个 time 值可能跨 chunk 边界，暂存到下一轮
-            last_time = chunk.iloc[-1]["time"]
-            tail_mask = chunk["time"] == last_time
-            pending_rows = chunk[tail_mask].copy()
-            chunk = chunk[~tail_mask]
+        t_numeric = _time.time()
 
-            if chunk.empty:
-                continue
+        # 预计算衍生列（一次性，替代每帧 calc_pct_change + calc_limit_up_price）
+        close_vals = df["close"].values
+        now_vals = df["now"].values
+        codes = df["code"].values
 
-            # 按 time 列分帧
-            for tick_time, frame_df in chunk.groupby("time", sort=True):
-                frame_df = frame_df.reset_index(drop=True)
-                self.callback(phase, frame_df, str(tick_time))
-                frame_count += 1
+        # pct_chg
+        mask = close_vals > 0
+        pct_chg = np.zeros(len(df), dtype=np.float64)
+        pct_chg[mask] = np.round((now_vals[mask] - close_vals[mask]) / close_vals[mask] * 100, 4)
+        df["pct_chg"] = pct_chg
 
-        # 处理最后一批 pending_rows
-        if not pending_rows.empty:
-            tick_time = str(pending_rows.iloc[0]["time"])
-            pending_rows = pending_rows.reset_index(drop=True)
-            self.callback(phase, pending_rows, tick_time)
+        # limit_ratio, limit_up_price, limit_down_price, is_limit_up, is_limit_down
+        codes_str = codes.astype(str)
+        # 提取纯数字代码（去掉 sh/sz/bj 前缀）
+        pure_codes = np.array([c[2:] if len(c) > 6 else c for c in codes_str])
+        limit_ratios = np.where(
+            np.char.startswith(pure_codes, "300")
+            | np.char.startswith(pure_codes, "301")
+            | np.char.startswith(pure_codes, "688"),
+            config.LIMIT_RATIO_GEM_STAR,
+            config.LIMIT_RATIO_MAIN,
+        )
+        df["limit_ratio"] = limit_ratios
+        df["limit_up_price"] = np.round(close_vals * (1 + limit_ratios), 2)
+        df["limit_down_price"] = np.round(close_vals * (1 - limit_ratios), 2)
+        df["is_limit_up"] = now_vals >= df["limit_up_price"].values
+        df["is_limit_down"] = now_vals <= df["limit_down_price"].values
+
+        t_calc = _time.time()
+
+        # 按 time 分帧回调
+        frame_count = 0
+        for tick_time, frame_df in df.groupby("time", sort=True):
+            frame_df = frame_df.reset_index(drop=True)
+            self.callback(phase, frame_df, str(tick_time))
             frame_count += 1
 
-        logger.info(f"[{phase}] 回放完成，共 {frame_count} 帧")
+        t_end = _time.time()
+        logger.info(
+            f"[{phase}] 回放完成，共 {frame_count} 帧 "
+            f"(加载 {t_load - t0:.1f}s, 数值转换 {t_numeric - t_load:.1f}s, "
+            f"预计算 {t_calc - t_numeric:.1f}s, 回放 {t_end - t_calc:.1f}s)"
+        )
 
     def stop(self) -> None:
         """回放模式无需停止。"""

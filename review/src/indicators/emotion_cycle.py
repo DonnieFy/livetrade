@@ -406,10 +406,15 @@ def _calc_emotion_5d_matrix(dc, days: int = 5) -> list[dict]:
         streak2_count = 0
         streak3_count = 0
         if not limit_up_df.empty:
+            # 注意：历史日 d 的连板回溯必须从 d 当天开始，不能从最新日开始，
+            # 否则会把 d+1 已断板的票在 d 的连板数错误算为 0。
             all_dates = sorted(klines["date"].unique(), reverse=True)
+            date_index = {date: idx for idx, date in enumerate(all_dates)}
+            start_idx = date_index.get(d)
+            dates_from_target = all_dates[start_idx:] if start_idx is not None else []
             for _, row in limit_up_df.iterrows():
                 symbol = str(row["symbol"]).zfill(6)
-                bc = _count_consecutive_limit_up(symbol, all_dates, klines)
+                bc = _count_consecutive_limit_up(symbol, dates_from_target, klines)
                 market_height = max(market_height, bc)
                 if bc >= 2:
                     streak2_count += 1
@@ -528,4 +533,3 @@ def _classify_emotion_phase(
         return "轮动"
     # 默认
     return "中性"
-

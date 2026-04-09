@@ -14,6 +14,9 @@ REVIEW_STRATEGY_ALIASES: dict[str, tuple[str, ...]] = {
     "auction_strength": ("main_rise_resonance", "new_mainline_breakout"),
     "ice_point_repair": ("ice_repair", "mispriced_recovery"),
     "auction_limit_chase": ("fast_rotation_scalp",),
+    "volatility_contraction": ("volatility_breakout",),
+    "strong_gets_stronger": ("momentum_continuation",),
+    "highest_board_dip": ("board_resonance_dip",),
 }
 
 

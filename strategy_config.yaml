@@ -83,3 +83,50 @@ strategies:
       auction_amount_ratio_max: 0.125     # 竞价金额比例最大值（1/8）
       min_open_strength: 0.02             # 最小高开幅度（2%）
       top_n: 3                           # 输出TOP N
+
+  # ======================================================
+  # 波动率收敛突破策略 ★ 新策略
+  # ======================================================
+  volatility_contraction:
+    enabled: true
+    phases: ["trading"]
+    time_range: ["09:30", "14:57"]
+    candidates: []                        # 留空表示全市场扫描
+    params:
+      rally_gain_pct: 80.0                # 条件1: 最小拉升幅度(%)
+      rally_max_days: 15                  # 条件1: 拉升最大天数
+      rally_lookback: 60                  # 条件1: 回看总天数
+      ma_proximity: 0.05                  # 条件2: 距MA20的最大偏离(5%)
+      vol_expand_multiple: 1.5            # 条件4: 今日振幅/近3日平均振幅的倍数
+      volume_ratio: 1.2                   # 条件5: 今日量/5日均量比
+
+  # ======================================================
+  # 强更强策略 ★ 新策略
+  # ======================================================
+  strong_gets_stronger:
+    enabled: true
+    phases: ["auction_open", "trading"]
+    time_range: ["09:15", "10:00"]
+    candidates: []                        # 留空表示全市场扫描
+    params:
+      extreme_days_min: 5                 # 条件1: 近10天涨跌停天数下限
+      lookback_days: 10                   # 条件1: 回看天数
+      volume_expand_ratio: 1.2            # 条件3: 昨日量/5日均量比
+      open_strength_min: 0.09             # 条件4: 开盘涨幅下限(9%)
+      limit_approach_pct: 0.99            # 条件5: 接近涨停价的百分比
+      limit_approach_by_time: "09:40:00"  # 条件5: 限时
+
+  # ======================================================
+  # 最高板板块共振低吸策略 ★ 新策略
+  # ======================================================
+  highest_board_dip:
+    enabled: true
+    phases: ["trading"]
+    time_range: ["09:30", "14:57"]
+    candidates: []                        # 从review数据自动获取最高板
+    params:
+      one_word_days_min: 2                # 条件2: 一字板最少天数
+      cluster_top_n: 100                  # 跌幅聚类取样数
+      dip_from_high_pct: 6.0             # 买点1: 从日内高点回撤幅度(%)
+      sector_decline_pct: -1.0            # 买点1: 聚类跌幅阈值(%)
+      pullback_ratio: 0.98                # 买点2: 回调比例

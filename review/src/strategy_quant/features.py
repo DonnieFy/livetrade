@@ -116,15 +116,29 @@ def prepare_daily_features(
         # Fallback: turnover column not in source CSV — set to NaN
         df["turnover_rate"] = np.nan
 
+    df["_g_count"] = df.groupby("symbol").cumcount()
+    close_s = df["close"]
+    high_s = df["high"]
+    low_s = df["low"]
+    amount_s = df["amount"] if "amount" in df.columns else pd.Series()
+    volume_s = df["volume"] if "volume" in df.columns else pd.Series()
+
     for window in (3, 5, 10, 20, 30):
-        df[f"ma{window}"] = df.groupby("symbol")["close"].transform(lambda s: s.rolling(window).mean())
-        df[f"high_{window}"] = (
-            df.groupby("symbol")["high"].transform(lambda s: s.rolling(window).max().shift(1))
-        )
-        df[f"low_{window}"] = (
-            df.groupby("symbol")["low"].transform(lambda s: s.rolling(window).min().shift(1))
-        )
-        df[f"ret_{window}d"] = df.groupby("symbol")["close"].pct_change(window)
+        _ma = close_s.rolling(window).mean()
+        _ma.loc[df["_g_count"] < window - 1] = np.nan
+        df[f"ma{window}"] = _ma
+
+        _hw = high_s.rolling(window).max().shift(1)
+        _hw.loc[df["_g_count"] < window] = np.nan
+        df[f"high_{window}"] = _hw
+
+        _lw = low_s.rolling(window).min().shift(1)
+        _lw.loc[df["_g_count"] < window] = np.nan
+        df[f"low_{window}"] = _lw
+
+        _ret = close_s.pct_change(window)
+        _ret.loc[df["_g_count"] < window] = np.nan
+        df[f"ret_{window}d"] = _ret
 
     df["distance_to_20d_high"] = np.where(df["high_20"] > 0, df["close"] / df["high_20"] - 1.0, np.nan)
     df["distance_to_30d_high"] = np.where(df["high_30"] > 0, df["close"] / df["high_30"] - 1.0, np.nan)
@@ -133,8 +147,19 @@ def prepare_daily_features(
     df["close_vs_ma10"] = np.where(df["ma10"] > 0, df["close"] / df["ma10"] - 1.0, np.nan)
     df["close_vs_ma20"] = np.where(df["ma20"] > 0, df["close"] / df["ma20"] - 1.0, np.nan)
 
-    df["amount_ma5"] = df.groupby("symbol")["amount"].transform(lambda s: s.rolling(5).mean())
-    df["volume_ma5"] = df.groupby("symbol")["volume"].transform(lambda s: s.rolling(5).mean())
+    if not amount_s.empty:
+        _ama5 = amount_s.rolling(5).mean()
+        _ama5.loc[df["_g_count"] < 4] = np.nan
+        df["amount_ma5"] = _ama5
+    else:
+        df["amount_ma5"] = np.nan
+
+    if not volume_s.empty:
+        _vma5 = volume_s.rolling(5).mean()
+        _vma5.loc[df["_g_count"] < 4] = np.nan
+        df["volume_ma5"] = _vma5
+    else:
+        df["volume_ma5"] = np.nan
     df["amount_vs_ma5"] = np.where(df["amount_ma5"] > 0, df["amount"] / df["amount_ma5"], np.nan)
     df["volume_vs_ma5"] = np.where(df["volume_ma5"] > 0, df["volume"] / df["volume_ma5"], np.nan)
     df["limit_up_streak"] = (

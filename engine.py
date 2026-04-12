@@ -142,8 +142,8 @@ class Engine:
             enabled_in_config = strat_config.get("enabled", True)
             if active_from_review:
                 if slug not in active_from_review:
-                    # 回测模式下 enabled: true 可覆盖 analyst 的 active_strategies 限制
-                    if not (self.backtest and enabled_in_config):
+                    # enabled: true 可覆盖 analyst 的 active_strategies 限制
+                    if not enabled_in_config:
                         logger.info(f"策略 '{slug}' 不在 analyst.active_strategies 中，跳过")
                         continue
             elif not enabled_in_config:
@@ -200,8 +200,13 @@ class Engine:
             logger.info("未找到可用复盘上下文，按默认配置运行")
 
         if self.backtest:
+            # 从策略配置中聚合最小时间范围
+            bt_time_range = self._compute_backtest_time_range()
+
             watcher = ReplayWatcher(
-                self.date_string, self._on_new_rows, data_dir=self.data_dir
+                self.date_string, self._on_new_rows,
+                data_dir=self.data_dir,
+                time_range=bt_time_range,
             )
         else:
             watcher = TickWatcher(self.date_string, self._on_new_rows)
@@ -212,6 +217,30 @@ class Engine:
             logger.info("收到中断信号，停止引擎")
         finally:
             watcher.stop()
+
+    def _compute_backtest_time_range(self) -> tuple[str, str] | None:
+        """从所有活跃策略的 time_range 配置中聚合出最小覆盖范围。
+
+        例如策略A要求 09:30~10:00，策略B要求 09:15~09:45，
+        则返回 (09:15, 10:00)。
+
+        如果没有策略配置 time_range，返回 None（全量回放）。
+        """
+        if not self._active_strategies:
+            return None
+
+        starts = []
+        ends = []
+        for _, _, strat_config in self._active_strategies:
+            tr = strat_config.get("time_range")
+            if tr and len(tr) == 2:
+                starts.append(tr[0])
+                ends.append(tr[1])
+
+        if not starts:
+            return None
+
+        return (min(starts), max(ends))
 
         logger.info(self.alert_writer.summary())
         logger.info("Engine 已停止")

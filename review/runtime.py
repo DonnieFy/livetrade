@@ -17,6 +17,10 @@ REVIEW_STRATEGY_ALIASES: dict[str, tuple[str, ...]] = {
     "volatility_contraction": ("volatility_breakout",),
     "strong_gets_stronger": ("momentum_continuation",),
     "highest_board_dip": ("board_resonance_dip",),
+    "trend_acceleration": ("trend_volatility_breakout",),
+    "board_oversold_dip": ("sector_divergence_dip",),
+    "highest_board_premium": ("highest_board_arbitrage",),
+    "first_board_1plus1": ("board_1plus1",),
 }
 
 

@@ -130,3 +130,59 @@ strategies:
       dip_from_high_pct: 6.0             # 买点1: 从日内高点回撤幅度(%)
       sector_decline_pct: -1.0            # 买点1: 聚类跌幅阈值(%)
       pullback_ratio: 0.98                # 买点2: 回调比例
+
+  # ======================================================
+  # 趋势加速突破策略 ★ 新策略
+  # ======================================================
+  trend_acceleration:
+    enabled: true
+    phases: ["trading"]
+    time_range: ["09:30", "14:57"]
+    candidates: []
+    params:
+      vol_expand_multiple: 1.5            # 日内振幅/近5日平均振幅的倍数
+      volume_ratio: 1.0                   # 量能比(0=不检查)
+      recent_rally_pct: 3.0               # 近5日最大单日涨幅下限(%)
+      recent_days: 5                      # 短期走强回看天数
+      rv_min: 0.001                       # tick级RV绝对值下限(0=不过滤)
+
+  # ======================================================
+  # 连板错杀低吸策略 ★ 新策略
+  # ======================================================
+  board_oversold_dip:
+    enabled: true
+    phases: ["trading"]
+    time_range: ["09:30", "14:57"]
+    candidates: []
+    params:
+      min_boards: 2                       # 最少连板数
+      lookback_days: 10                   # 连板回看天数
+      dip_threshold: -4.0                 # 低吸跌幅阈值(%)
+      sector_min_avg: 0.0                 # 板块最低平均涨幅(%)
+
+  # ======================================================
+  # 最高板套利策略 ★ 新策略
+  # ======================================================
+  highest_board_premium:
+    enabled: true
+    phases: ["auction_open", "trading"]
+    time_range: ["09:15", "09:45"]
+    candidates: []
+    params:
+      open_strength_min: 0.05             # 开盘涨幅下限(5%)
+      peer_limit_pct: 0.08                # 同袍强势判定涨幅(8%)
+      max_board_count: 3                  # 最高板数量上限(<=N只才触发)
+
+  # ======================================================
+  # 首板1+1策略 ★ 新策略
+  # ======================================================
+  first_board_1plus1:
+    enabled: true
+    phases: ["trading"]
+    time_range: ["09:30", "14:57"]
+    candidates: []
+    params:
+      volume_ratio: 1.0                   # 量能比(0=不检查)
+      rv_min: 0.0                         # tick级RV下限(0=不过滤)
+      breakout_pct_min: 0.01              # 突破昨高最低幅度(1%)
+      pct_chg_min: 0.04                   # 突破时最低涨幅(4%)

@@ -38,7 +38,8 @@ class Alert:
 
     def format_line(self) -> str:
         """格式化为输出文件中的一行文本。"""
-        return f"[{self.strategy_name}] {self.code} {self.name} | {self.message}"
+        time_prefix = f"{self.time} " if self.time else ""
+        return f"{time_prefix}[{self.strategy_name}] {self.code} {self.name} | {self.message}"
 
 
 # ============================================================

@@ -114,13 +114,16 @@ class ReplayWatcher:
     """回测/回放模式 — 将历史 .csv.gz 按帧模拟回调。
 
     优化策略：一次性加载整个文件并预计算衍生列，避免逐帧重复计算。
+    支持按时间范围裁剪，只加载和回放指定时间段的数据。
     """
 
     def __init__(self, date_string: str, callback: OnNewRowsCallback,
-                 data_dir: str | None = None):
+                 data_dir: str | None = None,
+                 time_range: tuple[str, str] | None = None):
         self.date_string = date_string
         self.callback = callback
         self.data_dir = data_dir or os.path.join(config.TICKS_DATA_DIR, date_string)
+        self.time_range = time_range  # ("09:25", "10:00") 或 None（全量）
 
     def start(self) -> None:
         """按阶段顺序回放所有帧。"""
@@ -131,8 +134,14 @@ class ReplayWatcher:
 
         logger.info("ReplayWatcher 回放完成")
 
+    # 回测所需的最小列集（策略 + 预计算衍生列所需的源列）
+    _ESSENTIAL_COLUMNS = [
+        "code", "name", "close", "now", "high", "low",
+        "open", "volume", "turnover", "time",
+    ]
+
     def _replay_phase(self, phase: str) -> None:
-        """回放单个阶段 — 一次性加载 + 预计算 + 按帧回调。"""
+        """回放单个阶段 — 分块加载 + 提前过滤 + 预计算 + 按帧回调。"""
         gz_path = os.path.join(
             self.data_dir, f"{self.date_string}_{phase}.csv.gz"
         )
@@ -155,28 +164,64 @@ class ReplayWatcher:
         import time as _time
         t0 = _time.time()
 
-        # 一次性加载整个文件
+        # 确定需要的列名（只读必要列，减少内存和解压开销）
+        essential = set(self._ESSENTIAL_COLUMNS)
+        usecols = [c for c in config.CSV_COLUMNS if c in essential]
+
+        # 分块读取 + 提前过滤
+        has_time_filter = self.time_range is not None
+        chunks = []
+        total_raw = 0
         try:
-            df = pd.read_csv(
+            for chunk in pd.read_csv(
                 file_path,
                 names=config.CSV_COLUMNS,
                 header=None,
                 compression=compression,
                 dtype=str,
-            )
+                usecols=usecols,
+                chunksize=1_000_000,
+            ):
+                total_raw += len(chunk)
+                if has_time_filter and "time" in chunk.columns:
+                    t_start, t_end = self.time_range
+                    chunk = chunk[
+                        (chunk["time"] >= t_start) & (chunk["time"] <= t_end)
+                    ]
+                if not chunk.empty:
+                    chunks.append(chunk)
         except Exception as e:
             logger.error(f"[{phase}] 打开文件失败: {e}")
             return
 
-        if df.empty:
+        if not chunks:
+            if has_time_filter:
+                logger.info(
+                    f"[{phase}] 时间裁剪 {self.time_range[0]}~{self.time_range[1]}: "
+                    f"{total_raw}→0 行 (裁剪 {total_raw} 行)"
+                )
+                logger.info(f"[{phase}] 裁剪后无数据，跳过")
             return
 
         t_load = _time.time()
 
-        # 批量转换数值列（一次性，替代逐帧 to_numeric）
-        numeric_cols_present = [c for c in config.NUMERIC_COLUMNS if c in df.columns]
-        # 用 numpy 批量转换，避免逐列 pd.to_numeric 开销
-        for col in numeric_cols_present:
+        if len(chunks) == 1:
+            df = chunks[0]
+        else:
+            df = pd.concat(chunks, ignore_index=True)
+
+        if has_time_filter:
+            logger.info(
+                f"[{phase}] 时间裁剪 {self.time_range[0]}~{self.time_range[1]}: "
+                f"{total_raw}→{len(df)} 行 (裁剪 {total_raw - len(df)} 行)"
+            )
+
+        # 释放 chunks 内存
+        del chunks
+
+        # 批量转换数值列
+        numeric_in_df = [c for c in config.NUMERIC_COLUMNS if c in df.columns]
+        for col in numeric_in_df:
             arr = df[col].values
             try:
                 df[col] = arr.astype(np.float64)
@@ -185,20 +230,17 @@ class ReplayWatcher:
 
         t_numeric = _time.time()
 
-        # 预计算衍生列（一次性，替代每帧 calc_pct_change + calc_limit_up_price）
+        # 预计算衍生列
         close_vals = df["close"].values
         now_vals = df["now"].values
         codes = df["code"].values
 
-        # pct_chg
         mask = close_vals > 0
         pct_chg = np.zeros(len(df), dtype=np.float64)
         pct_chg[mask] = np.round((now_vals[mask] - close_vals[mask]) / close_vals[mask] * 100, 4)
         df["pct_chg"] = pct_chg
 
-        # limit_ratio, limit_up_price, limit_down_price, is_limit_up, is_limit_down
         codes_str = codes.astype(str)
-        # 提取纯数字代码（去掉 sh/sz/bj 前缀）
         pure_codes = np.array([c[2:] if len(c) > 6 else c for c in codes_str])
         limit_ratios = np.where(
             np.char.startswith(pure_codes, "300")

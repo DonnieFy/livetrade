@@ -114,7 +114,7 @@ class TrendAccelerationStrategy(BaseStrategy):
             # 记录特征
             amplitudes = grp.tail(5)["amplitude"].values if "amplitude" in grp.columns else np.array([5.0])
             avg_amplitude_5d = float(amplitudes.mean())
-            # klines_daily.amount 常见口径为"千元"，转换到 tick 的"元"口径再比较
+            # klines_daily.amount 常见口径为“千元”，转换到 tick 的“元”口径再比较
             avg_amount_5d = float(grp.tail(5)["amount"].mean()) * float(daily_amount_unit)
             prev_high = float(grp.iloc[-1]["high"])
             pre_close = float(grp.iloc[-1]["close"])
@@ -199,9 +199,9 @@ class TrendAccelerationStrategy(BaseStrategy):
 
             # 波动率放大：日内振幅 > 近5日平均振幅 × 倍数
             snap = snapshots.get(code)
-            if snap and snap.high > 0 and snap.low < 999999:
+            if snap and snap.high > 0 and 0 < snap.low < 999999 and snap.low <= snap.high:
                 intraday_amplitude = (snap.high - snap.low) / pre_close * 100
-            elif highs is not None and lows is not None:
+            elif highs is not None and lows is not None and highs[i] > 0 and lows[i] > 0:
                 intraday_amplitude = (highs[i] - lows[i]) / pre_close * 100
             else:
                 continue
@@ -219,7 +219,7 @@ class TrendAccelerationStrategy(BaseStrategy):
             rv = 0.0
             if rv_min > 0:
                 rv = calc_tick_rv(np.array(buf))
-                if 0 < rv < rv_min:
+                if rv < rv_min:
                     continue
 
             name = names[i] if names is not None else ""
@@ -231,12 +231,16 @@ class TrendAccelerationStrategy(BaseStrategy):
                 strategy_slug=self.slug,
                 strategy_name=self.name,
                 message=(
-                    f"趋势加速: 涨幅{pct_chg:.2f}%, "
+                    f"趋势加速: 涨幅(较昨收){pct_chg:.2f}%, "
                     f"振幅{intraday_amplitude:.1f}%vs5日均{feat['avg_amplitude_5d']:.1f}%, "
-                    f"近5日最强{feat['max_recent_pct']:.1f}%{rv_info}"
+                    f"近5日最大单日涨幅{feat['max_recent_pct']:.1f}%{rv_info}"
                 ),
                 level="important",
             ))
             alerted.add(code)
+
+        # 持久化增量状态，避免每帧重置导致 RV 恒为 0
+        ctx.state["_price_bufs"] = price_bufs
+        ctx.state["alerted_codes"] = alerted
 
         return alerts

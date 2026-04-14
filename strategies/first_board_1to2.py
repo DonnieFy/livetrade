@@ -73,7 +73,7 @@ class FirstBoard1to2Strategy(BaseStrategy):
 
         prev_date = prev_dates[-1]
 
-        # klines_daily.amount 常见口径为"千元"，统一换算到"元"后与 tick 成交额比较
+        # klines_daily.amount 常见口径为“千元”，统一换算到“元”后与 tick 成交额比较
         daily_amount_unit = float(ctx.params.get("daily_amount_unit", 1000.0))
 
         # 计算每只股票的连板天数
@@ -277,7 +277,7 @@ class FirstBoard1to2Strategy(BaseStrategy):
             return []
 
         # 只在竞价阶段检测
-        if ctx.market.current_phase != "auction":
+        if ctx.market.current_phase != config.PHASE_AUCTION_OPEN:
             return []
 
         alerts = []

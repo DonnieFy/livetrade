@@ -16,6 +16,7 @@ import gzip
 import logging
 import os
 import time
+from datetime import datetime
 from typing import Callable
 
 import pandas as pd
@@ -54,6 +55,13 @@ class TickWatcher:
         logger.info(f"TickWatcher 启动，监听目录: {self.data_dir}")
 
         while self.running:
+            # 每天 15:05 自动安全退出，以便第二天 systemd 定时器能拉起新的进程
+            now = datetime.now()
+            if now.hour == 15 and now.minute >= 5:
+                logger.info("已过 15:05 自动关机时间，安静退出等待明日唤醒...")
+                self.running = False
+                break
+
             for phase in config.ALL_PHASES:
                 csv_path = self._get_csv_path(phase)
 
@@ -86,28 +94,41 @@ class TickWatcher:
         if current_size <= last_offset:
             return  # 无新数据
 
-        # 读取增量内容
+        # 逐块增量读取，避免一次性加载过大内存(OOM)
         with open(csv_path, "r", encoding="utf-8") as f:
             f.seek(last_offset)
-            new_content = f.read()
+            
+            frame_lines = []
+            
+            while True:
+                line = f.readline()
+                if not line:
+                    break
+                    
+                frame_lines.append(line)
+                
+                if len(frame_lines) >= 10000:
+                    df = parse_csv_text("".join(frame_lines))
+                    if not df.empty:
+                        tick_time = extract_tick_time(df) or ""
+                        logger.debug(
+                            f"[{phase}] 增量读取块: {len(df)} 行, "
+                            f"tick_time={tick_time}"
+                        )
+                        self.callback(phase, df, tick_time)
+                    frame_lines = []
+                    
+            if frame_lines:
+                df = parse_csv_text("".join(frame_lines))
+                if not df.empty:
+                    tick_time = extract_tick_time(df) or ""
+                    logger.debug(
+                        f"[{phase}] 增量读取末块: {len(df)} 行, "
+                        f"tick_time={tick_time}"
+                    )
+                    self.callback(phase, df, tick_time)
 
-        self._offsets[phase] = current_size
-
-        if not new_content.strip():
-            return
-
-        # 解析并回调
-        df = parse_csv_text(new_content)
-        if df.empty:
-            return
-
-        tick_time = extract_tick_time(df) or ""
-        logger.debug(
-            f"[{phase}] 增量读取: {len(df)} 行, "
-            f"偏移 {last_offset} → {current_size}, "
-            f"tick_time={tick_time}"
-        )
-        self.callback(phase, df, tick_time)
+            self._offsets[phase] = f.tell()
 
 
 class ReplayWatcher:
@@ -135,9 +156,16 @@ class ReplayWatcher:
         logger.info("ReplayWatcher 回放完成")
 
     # 回测所需的最小列集（策略 + 预计算衍生列所需的源列）
+    # 注意保留竞价关键盘口列，确保 _normalize_auction_frame 可用，
+    # 且竞价策略（如 auction_limit_chase）在回测时不会因缺列失真。
     _ESSENTIAL_COLUMNS = [
         "code", "name", "close", "now", "high", "low",
         "open", "volume", "turnover", "time",
+        "buy", "sell",
+        "bid1_volume", "bid1",
+        "bid2_volume", "bid2",
+        "ask1_volume", "ask1",
+        "ask2_volume", "ask2",
     ]
 
     def _replay_phase(self, phase: str) -> None:

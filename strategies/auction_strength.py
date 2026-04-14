@@ -93,11 +93,15 @@ class AuctionStrengthStrategy(BaseStrategy):
                 if item.get("symbol")
             }
 
-        # 昨日成交量基线 (symbol -> volume)
+        # 日线 amount 常见口径为“千元”，统一换算到 tick 的“元”口径
+        daily_amount_unit = float(ctx.params.get("daily_amount_unit", 1000.0))
+
+        # 昨日成交量基线 (symbol -> amount in 元)
         vol_baseline = {}
         for _, row in prev_day.iterrows():
             sym = str(row["symbol"]).zfill(6)
-            vol_baseline[sym] = row.get("amount", row.get("volume", 0))
+            base = float(row.get("amount", row.get("volume", 0)))
+            vol_baseline[sym] = base * daily_amount_unit
 
         ctx.state["limit_up_symbols"] = limit_up_symbols
         ctx.state["vol_baseline"] = vol_baseline
@@ -107,6 +111,7 @@ class AuctionStrengthStrategy(BaseStrategy):
         ctx.state["vol_multiple_threshold"] = ctx.params.get("vol_multiple_threshold", 2.0)
         ctx.state["min_bid_ask_ratio"] = ctx.params.get("min_bid_ask_ratio", 1.5)
         ctx.state["min_open_strength"] = ctx.params.get("min_open_strength", 0.02)
+        ctx.state["daily_amount_unit"] = daily_amount_unit
 
         # 已触发过的股票（防重复报警）
         ctx.state["alerted_codes"] = set()

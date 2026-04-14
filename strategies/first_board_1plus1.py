@@ -68,6 +68,7 @@ class FirstBoard1Plus1Strategy(BaseStrategy):
         rv_min = ctx.params.get("rv_min", 0.0)
         breakout_pct_min = ctx.params.get("breakout_pct_min", 0.0)
         pct_chg_min = ctx.params.get("pct_chg_min", 0.0)
+        daily_amount_unit = float(ctx.params.get("daily_amount_unit", 1000.0))
 
         # 需要3天: 前天(首板日)、昨天(断板日)、今天(交易日)
         if len(prev_dates) < 2:
@@ -144,7 +145,7 @@ class FirstBoard1Plus1Strategy(BaseStrategy):
             candidates[sym_str] = {
                 "yesterday_high": float(yd["high"]),
                 "yesterday_close": float(yd["close"]),
-                "yesterday_amount": float(yd.get("amount", 0)),
+                "yesterday_amount": float(yd.get("amount", 0)) * daily_amount_unit,
                 "yesterday_pre_close": yd_pre_close,
                 "day_before_close": float(db["close"]),
                 "ma5": ma5,
@@ -156,6 +157,7 @@ class FirstBoard1Plus1Strategy(BaseStrategy):
         ctx.state["rv_min"] = rv_min
         ctx.state["breakout_pct_min"] = breakout_pct_min
         ctx.state["pct_chg_min"] = pct_chg_min
+        ctx.state["daily_amount_unit"] = daily_amount_unit
         ctx.state["alerted_codes"] = set()
 
         logger.info(

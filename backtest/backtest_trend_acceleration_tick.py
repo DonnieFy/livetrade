@@ -20,6 +20,7 @@ def run_backtest(date: str) -> None:
                 "params": {
                     "vol_expand_multiple": 1.5,
                     "volume_ratio": 1.0,
+                    "daily_amount_unit": 1000.0,
                     "recent_rally_pct": 3.0,
                     "recent_days": 5,
                     "rv_min": 0.001,

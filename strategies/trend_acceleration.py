@@ -66,6 +66,7 @@ class TrendAccelerationStrategy(BaseStrategy):
         # 参数
         vol_expand_multiple = ctx.params.get("vol_expand_multiple", 1.5)
         volume_ratio = ctx.params.get("volume_ratio", 1.0)
+        daily_amount_unit = ctx.params.get("daily_amount_unit", 1000.0)
         recent_rally_pct = ctx.params.get("recent_rally_pct", 3.0)
         recent_days = ctx.params.get("recent_days", 5)
         rv_min = ctx.params.get("rv_min", 0.0)
@@ -113,7 +114,8 @@ class TrendAccelerationStrategy(BaseStrategy):
             # 记录特征
             amplitudes = grp.tail(5)["amplitude"].values if "amplitude" in grp.columns else np.array([5.0])
             avg_amplitude_5d = float(amplitudes.mean())
-            avg_amount_5d = float(grp.tail(5)["amount"].mean())
+            # klines_daily.amount 常见口径为"千元"，转换到 tick 的"元"口径再比较
+            avg_amount_5d = float(grp.tail(5)["amount"].mean()) * float(daily_amount_unit)
             prev_high = float(grp.iloc[-1]["high"])
             pre_close = float(grp.iloc[-1]["close"])
 
@@ -129,6 +131,7 @@ class TrendAccelerationStrategy(BaseStrategy):
         ctx.state["ready"] = True
         ctx.state["vol_expand_multiple"] = vol_expand_multiple
         ctx.state["volume_ratio"] = volume_ratio
+        ctx.state["daily_amount_unit"] = daily_amount_unit
         ctx.state["rv_min"] = rv_min
         ctx.state["alerted_codes"] = set()
 

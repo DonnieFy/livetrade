@@ -28,6 +28,7 @@ strategies:
       vol_multiple_threshold: 2.0
       min_bid_ask_ratio: 1.5
       min_open_strength: 0.02
+      daily_amount_unit: 1000.0           # 日线amount到tick成交额的换算系数(千元->元)
 
   # ======================================================
   # 冰点修复策略 (暂时禁用)
@@ -79,6 +80,7 @@ strategies:
       lookback_days: 10                   # 首板前回看天数
       volatility_threshold: 4.0           # 首板前涨跌幅阈值（±4%）
       max_amount_yi: 15.0                 # 最大成交额（亿元）
+      daily_amount_unit: 1000.0           # 日线amount到tick成交额的换算系数(千元->元)
       auction_amount_ratio_min: 0.10      # 竞价金额比例最小值（1/10）
       auction_amount_ratio_max: 0.125     # 竞价金额比例最大值（1/8）
       min_open_strength: 0.02             # 最小高开幅度（2%）
@@ -99,6 +101,7 @@ strategies:
       ma_proximity: 0.05                  # 条件2: 距MA20的最大偏离(5%)
       vol_expand_multiple: 1.5            # 条件4: 今日振幅/近3日平均振幅的倍数
       volume_ratio: 1.2                   # 条件5: 今日量/5日均量比
+      daily_amount_unit: 1000.0           # 日线amount到tick成交额的换算系数(千元->元)
 
   # ======================================================
   # 强更强策略 ★ 新策略
@@ -142,6 +145,7 @@ strategies:
     params:
       vol_expand_multiple: 1.5            # 日内振幅/近5日平均振幅的倍数
       volume_ratio: 1.0                   # 量能比(0=不检查)
+      daily_amount_unit: 1000.0           # 日线amount到tick成交额的换算系数(千元->元)
       recent_rally_pct: 3.0               # 近5日最大单日涨幅下限(%)
       recent_days: 5                      # 短期走强回看天数
       rv_min: 0.001                       # tick级RV绝对值下限(0=不过滤)
@@ -183,6 +187,7 @@ strategies:
     candidates: []
     params:
       volume_ratio: 1.0                   # 量能比(0=不检查)
+      daily_amount_unit: 1000.0           # 日线amount到tick成交额的换算系数(千元->元)
       rv_min: 0.0                         # tick级RV下限(0=不过滤)
       breakout_pct_min: 0.01              # 突破昨高最低幅度(1%)
       pct_chg_min: 0.04                   # 突破时最低涨幅(4%)

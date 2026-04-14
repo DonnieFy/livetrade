@@ -73,6 +73,9 @@ class FirstBoard1to2Strategy(BaseStrategy):
 
         prev_date = prev_dates[-1]
 
+        # klines_daily.amount 常见口径为"千元"，统一换算到"元"后与 tick 成交额比较
+        daily_amount_unit = float(ctx.params.get("daily_amount_unit", 1000.0))
+
         # 计算每只股票的连板天数
         # 需要往前回溯多日数据
         lookback_dates = sorted_dates[max(0, len(sorted_dates) - 20):]  # 取最近20天
@@ -151,7 +154,7 @@ class FirstBoard1to2Strategy(BaseStrategy):
         for _, row in first_board_stocks.iterrows():
             symbol = row["symbol"]
             if symbol in stable_symbols:
-                amount_baseline[symbol] = row.get("amount", 0)
+                amount_baseline[symbol] = float(row.get("amount", 0)) * daily_amount_unit
 
         # 过滤成交额过大的首板
         max_amount_yi = ctx.params.get("max_amount_yi", 15.0)  # 最大成交额（亿元）
@@ -174,7 +177,7 @@ class FirstBoard1to2Strategy(BaseStrategy):
 
                 first_board_data[symbol] = {
                     "close": float(row["close"]),
-                    "amount": float(row.get("amount", 0)),
+                    "amount": amount_baseline.get(symbol, 0.0),
                     "pct_chg": float(row.get("pct_chg", 0)),
                     "volatility": {
                         "avg_abs_pct": avg_abs_pct,
@@ -189,6 +192,7 @@ class FirstBoard1to2Strategy(BaseStrategy):
         ctx.state["auction_amount_ratio_min"] = ctx.params.get("auction_amount_ratio_min", 0.10)  # 竞价金额比例最小值
         ctx.state["auction_amount_ratio_max"] = ctx.params.get("auction_amount_ratio_max", 0.125)  # 竞价金额比例最大值
         ctx.state["min_open_strength"] = ctx.params.get("min_open_strength", 0.02)  # 最小高开幅度
+        ctx.state["daily_amount_unit"] = daily_amount_unit
 
         # 已触发过的股票（防重复报警）
         ctx.state["alerted_codes"] = set()

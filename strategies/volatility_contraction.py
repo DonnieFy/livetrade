@@ -68,6 +68,7 @@ class VolatilityContractionStrategy(BaseStrategy):
         ma_proximity = ctx.params.get("ma_proximity", 0.05)
         vol_expand_multiple = ctx.params.get("vol_expand_multiple", 1.5)
         volume_ratio = ctx.params.get("volume_ratio", 1.2)
+        daily_amount_unit = float(ctx.params.get("daily_amount_unit", 1000.0))
 
         # 取最近60天数据用于计算
         recent_dates = prev_dates[-rally_lookback:]
@@ -114,7 +115,7 @@ class VolatilityContractionStrategy(BaseStrategy):
             # 记录候选股特征
             amplitudes = last_3["amplitude"].values
             avg_amplitude_3d = float(amplitudes.mean())
-            avg_amount_5d = float(grp.tail(5)["amount"].mean())
+            avg_amount_5d = float(grp.tail(5)["amount"].mean()) * daily_amount_unit
             prev_high = float(grp.iloc[-1]["high"])  # 前一日最高价
             pre_close = float(grp.iloc[-1]["close"])  # 前一日收盘价（当日昨收）
 
@@ -132,6 +133,7 @@ class VolatilityContractionStrategy(BaseStrategy):
         ctx.state["ready"] = True
         ctx.state["vol_expand_multiple"] = vol_expand_multiple
         ctx.state["volume_ratio"] = volume_ratio
+        ctx.state["daily_amount_unit"] = daily_amount_unit
         ctx.state["alerted_codes"] = set()
 
         logger.info(

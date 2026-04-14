@@ -23,6 +23,7 @@ from src.indicators.board_stats import compute_board_stats
 from src.indicators.emotion_cycle import compute_emotion_cycle
 from src.indicators.hot_sectors import compute_hot_sectors
 from src.indicators.index_status import compute_index_status
+from src.indicators.buy_opportunities import compute_buy_opportunities
 from src.indicators.star_stocks import compute_star_stocks
 from src.strategy_quant.strategies import run_all_strategies
 
@@ -44,6 +45,7 @@ def run(date: str | None = None, top_n: int = 5) -> dict[str, Any]:
     star_stocks = compute_star_stocks(dc)
     action_analysis = compute_action_indicators(target_date, klines=dc.klines)
     action_trend = compute_action_trend(dc.get_trading_dates(10), klines=dc.klines)
+    buy_opportunities = compute_buy_opportunities(dc, board_stats, emotion_cycle)
     strategies_result = run_all_strategies(
         target_date,
         top_n=top_n,
@@ -61,6 +63,7 @@ def run(date: str | None = None, top_n: int = 5) -> dict[str, Any]:
         action_analysis=action_analysis,
         action_trend=action_trend,
         strategies_result=strategies_result,
+        buy_opportunities=buy_opportunities,
     )
 
     day_dir = ensure_review_day(target_date)
@@ -87,6 +90,7 @@ def build_machine_payload(
     action_analysis: dict[str, Any],
     action_trend: dict[str, Any],
     strategies_result: dict[str, Any],
+    buy_opportunities: dict[str, Any],
 ) -> dict[str, Any]:
     return {
         "meta": {
@@ -132,6 +136,7 @@ def build_machine_payload(
             "sector_clusters_hint": hot_sectors.get("svk_command_hint", ""),
         },
         "strategy_quant": _summarize_strategy_quant(strategies_result),
+        "buy_opportunities": buy_opportunities,
     }
 
 

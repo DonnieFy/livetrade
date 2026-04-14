@@ -62,3 +62,8 @@ strategy_quant:
   description: 八大策略量化候选结果
   update_mode: auto
   consumers: [review, livetrade]
+
+buy_opportunities:
+  description: 当日最佳买入机会分析（连板涨停、首板、日内低吸反转），含封板类型、入场时机、量价信号
+  update_mode: auto
+  consumers: [review, livetrade]

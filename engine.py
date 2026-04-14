@@ -88,6 +88,62 @@ def _normalize_candidate_code(code: str) -> str:
     return f"sh{pure}"
 
 
+def _normalize_auction_frame(frame: pd.DataFrame) -> pd.DataFrame:
+    """竞价阶段数据标准化。
+
+    新浪在竞价阶段经常返回 now/turnover/volume=0。
+    为了让策略层有可用口径：
+    - 价格：优先用 (buy+sell)/2；若单边有效则退化到 buy 或 sell
+    - 量：用 max(bid1_volume, ask1_volume) 作为成交量代理（股）
+    - 额：用 成交量代理 × 价格 作为成交额代理（元）
+    """
+    out = frame.copy()
+
+    def _num(col: str) -> pd.Series:
+        if col not in out.columns:
+            return pd.Series([0.0] * len(out), index=out.index, dtype=float)
+        return pd.to_numeric(out[col], errors="coerce").fillna(0.0)
+
+    now = _num("now")
+    buy = _num("buy")
+    sell = _num("sell")
+    bid1_volume = _num("bid1_volume")
+    ask1_volume = _num("ask1_volume")
+    turnover = _num("turnover")
+    volume = _num("volume")
+
+    # 竞价价格代理：双边优先，其次单边
+    quote_price = ((buy + sell) / 2.0).where((buy > 0) & (sell > 0), 0.0)
+    quote_price = quote_price.where(quote_price > 0, buy.where(buy > 0, 0.0))
+    quote_price = quote_price.where(quote_price > 0, sell.where(sell > 0, 0.0))
+
+    need_proxy_price = (now <= 0) & (quote_price > 0)
+    now = now.where(~need_proxy_price, quote_price)
+    out["now"] = now
+
+    # 竞价量/额代理（仅在原值无效时填充）
+    proxy_turnover = pd.concat([bid1_volume, ask1_volume], axis=1).max(axis=1)
+    turnover = turnover.where(turnover > 0, proxy_turnover)
+    out["turnover"] = turnover
+
+    proxy_volume = proxy_turnover * now
+    volume = volume.where(volume > 0, proxy_volume)
+    out["volume"] = volume
+
+    # 高频策略依赖 high/low，竞价阶段缺失时回填到代理价格
+    if "high" in out.columns:
+        high = _num("high").where(_num("high") > 0, now)
+        out["high"] = high
+    if "low" in out.columns:
+        low = _num("low").where(_num("low") > 0, now)
+        out["low"] = low
+    if "open" in out.columns:
+        open_price = _num("open").where(_num("open") > 0, now)
+        out["open"] = open_price
+
+    return out
+
+
 class Engine:
     """实盘/回测主引擎。"""
 
@@ -254,6 +310,8 @@ class Engine:
         if raw_df.empty:
             return
 
+        is_auction = phase in (config.PHASE_AUCTION_OPEN, config.PHASE_AUCTION_CLOSE)
+
         # 阶段切换处理
         if phase != self._current_phase:
             old_phase = self._current_phase
@@ -273,8 +331,13 @@ class Engine:
                 except Exception as e:
                     logger.error(f"[{strat.slug}] on_phase_start 异常: {e}")
 
-        # ---- 衍生列计算（回测模式已在 ReplayWatcher 预计算，实盘仍需逐帧计算）----
-        if not self.backtest:
+        # ---- 衍生列计算 ----
+        # 竞价阶段优先用买一/卖一口径修正 now/volume，再统一重算 pct/涨跌停
+        if is_auction:
+            raw_df = _normalize_auction_frame(raw_df)
+            raw_df = calc_pct_change(raw_df)
+            raw_df = calc_limit_up_price(raw_df)
+        elif not self.backtest:
             raw_df = calc_pct_change(raw_df)
             raw_df = calc_limit_up_price(raw_df)
 
@@ -282,7 +345,6 @@ class Engine:
         self._update_snapshots(raw_df)
 
         # ---- 构建瘦时序行并追加到 tick_history（list 缓存，避免逐帧 concat）----
-        is_auction = phase in (config.PHASE_AUCTION_OPEN, config.PHASE_AUCTION_CLOSE)
         ts_cols = TICK_TS_COLUMNS[:]
         if is_auction:
             ts_cols = ts_cols + [c for c in TICK_TS_AUCTION_EXTRA if c in raw_df.columns]
@@ -383,6 +445,10 @@ class Engine:
             now_price = nows[i]
             close_price = closes[i]
 
+            # 过滤无效行情，避免竞价阶段 now=0 污染日内 high/low 快照
+            if now_price <= 0 or close_price <= 0:
+                continue
+
             snap = snapshots.get(code)
             if snap is None:
                 lr = _limit_ratio(code)
@@ -397,6 +463,12 @@ class Engine:
                     limit_down_price=round(close_price * (1 - lr), 2),
                 )
                 snapshots[code] = snap
+
+            # 修复历史脏值（例如 low=0），防止后续策略误判超大振幅
+            if snap.high <= 0:
+                snap.high = now_price
+            if snap.low <= 0 or snap.low >= 999999:
+                snap.low = now_price
 
             # 更新缓变字段
             if now_price > snap.high:

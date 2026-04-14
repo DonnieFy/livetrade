@@ -93,6 +93,8 @@ class MarketContext:
     market_limit_down_count: int = 0
     market_total_volume: float = 0.0    # 全市场成交额累计
     market_avg_pct_chg: float = 0.0
+    auction_can_cancel: bool = False    # 竞价阶段是否可撤单（9:15-9:20）
+    auction_no_cancel: bool = False     # 竞价阶段是否不可撤单（9:20后 + 尾盘竞价）
 
     def update_from_snapshots(self, snapshots: dict[str, StockSnapshot],
                               phase: str, tick_time: str) -> None:
@@ -101,6 +103,8 @@ class MarketContext:
         self.current_phase = phase
         self.tick_count += 1
         self.total_tick_count += 1
+        self.auction_can_cancel = phase == "auction_open" and bool(tick_time) and tick_time < "09:20:00"
+        self.auction_no_cancel = (phase == "auction_open" and bool(tick_time) and tick_time >= "09:20:00") or phase == "auction_close"
 
         if not snapshots:
             return

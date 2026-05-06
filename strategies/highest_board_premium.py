@@ -50,7 +50,7 @@ logger = logging.getLogger(__name__)
 class HighestBoardPremiumStrategy(BaseStrategy):
     slug = "highest_board_premium"
     name = "最高板套利"
-    description = "连板稀少时最高板获得情绪溢价，叠加板块热度和一字支撑"
+    description = "最高板溢价与高位卡位确认"
 
     def prepare(self, ctx: StrategyContext) -> None:
         # 从 review 数据获取最高板
@@ -75,6 +75,12 @@ class HighestBoardPremiumStrategy(BaseStrategy):
         open_strength_min = ctx.params.get("open_strength_min", 0.05)
         peer_limit_pct = ctx.params.get("peer_limit_pct", 0.08)
         max_board_count = ctx.params.get("max_board_count", 3)  # 最高板<=N只时触发
+        carding_gap_max = int(ctx.params.get("carding_gap_max", 2))
+        carding_confirm_by = ctx.params.get("carding_confirm_by", "09:35:00")
+        carding_open_strength_min = float(ctx.params.get("carding_open_strength_min", 0.04))
+        leader_drawdown_max = float(ctx.params.get("leader_drawdown_max", -0.005))
+        peer_drawdown_max = float(ctx.params.get("peer_drawdown_max", -0.005))
+        min_weak_peers = int(ctx.params.get("min_weak_peers", 1))
 
         # 获取昨日涨停股集合（用于情绪支撑判断）
         review_limit_up = ctx.review.machine.get("stocks", {}).get("limit_up", [])
@@ -135,13 +141,48 @@ class HighestBoardPremiumStrategy(BaseStrategy):
                 "is_hot_theme": is_hot_theme,
             }
 
+        # 筛选高位卡位候选：比最高板低 1~N 板，但仍处于高位前排
+        rotation_candidates = {}
+        same_height_groups: dict[int, list[str]] = {}
+        for height_str, stocks in board_ladder.items():
+            height = int(height_str)
+            if height >= max_height or (max_height - height) > carding_gap_max:
+                continue
+            for stock in stocks:
+                sym = str(stock.get("symbol", "")).zfill(6)
+                name = str(stock.get("name", ""))
+                board_count = int(stock.get("board_count", height))
+
+                themes = []
+                is_hot_theme = False
+                if theme_resolver.loaded:
+                    themes = theme_resolver.resolve_themes(sym)
+                    is_hot_theme = any(t in main_themes for t in themes)
+
+                rotation_candidates[sym] = {
+                    "name": name,
+                    "board_count": board_count,
+                    "themes": themes,
+                    "is_hot_theme": is_hot_theme,
+                }
+                same_height_groups.setdefault(board_count, []).append(sym)
+
         ctx.state["candidates"] = candidates
+        ctx.state["rotation_candidates"] = rotation_candidates
+        ctx.state["same_height_groups"] = same_height_groups
+        ctx.state["max_height"] = max_height
         ctx.state["theme_resolver"] = theme_resolver
         ctx.state["yesterday_limit_up_symbols"] = yesterday_limit_up_symbols
         ctx.state["ready"] = True
         ctx.state["open_strength_min"] = open_strength_min
         ctx.state["peer_limit_pct"] = peer_limit_pct
-        ctx.state["alerted_codes"] = set()
+        ctx.state["carding_confirm_by"] = carding_confirm_by
+        ctx.state["carding_open_strength_min"] = carding_open_strength_min
+        ctx.state["leader_drawdown_max"] = leader_drawdown_max
+        ctx.state["peer_drawdown_max"] = peer_drawdown_max
+        ctx.state["min_weak_peers"] = min_weak_peers
+        ctx.state["premium_alerted_codes"] = set()
+        ctx.state["rotation_alerted_codes"] = set()
 
         logger.info(
             f"[{self.slug}] prepare 完成，最高板 {max_height} 板，"
@@ -154,13 +195,22 @@ class HighestBoardPremiumStrategy(BaseStrategy):
             return []
 
         candidates = ctx.state.get("candidates", {})
-        if not candidates:
+        rotation_candidates = ctx.state.get("rotation_candidates", {})
+        if not candidates and not rotation_candidates:
             return []
 
-        alerted = ctx.state.get("alerted_codes", set())
+        premium_alerted = ctx.state.get("premium_alerted_codes", set())
+        rotation_alerted = ctx.state.get("rotation_alerted_codes", set())
         yesterday_limit_up = ctx.state.get("yesterday_limit_up_symbols", set())
         open_strength_min = ctx.state.get("open_strength_min", 0.05)
         peer_limit_pct = ctx.state.get("peer_limit_pct", 0.08)
+        carding_confirm_by = ctx.state.get("carding_confirm_by", "09:35:00")
+        carding_open_strength_min = ctx.state.get("carding_open_strength_min", 0.04)
+        leader_drawdown_max = ctx.state.get("leader_drawdown_max", -0.005)
+        peer_drawdown_max = ctx.state.get("peer_drawdown_max", -0.005)
+        min_weak_peers = ctx.state.get("min_weak_peers", 1)
+        same_height_groups = ctx.state.get("same_height_groups", {})
+        max_height = int(ctx.state.get("max_height", 0))
 
         current_time = ctx.market.current_time
         alerts = []
@@ -194,54 +244,128 @@ class HighestBoardPremiumStrategy(BaseStrategy):
         codes = frame["code"].values
         nows = frame["now"].values
         closes = frame["close"].values
+        opens = frame["open"].values if "open" in frame.columns else None
         names = frame["name"].values if "name" in frame.columns else None
         pct_chgs = frame["pct_chg"].values if "pct_chg" in frame.columns else None
+        is_limit_ups = frame["is_limit_up"].values if "is_limit_up" in frame.columns else None
+
+        # 盘中观察最高板是否掉队，以及同身位竞争对手是否转弱
+        leader_weak_names = []
+        highest_board_codes = []
+        for sym, feat in candidates.items():
+            full_code = (
+                f"sz{sym}" if sym.startswith(("0", "1", "2", "3"))
+                else f"sh{sym}" if sym.startswith("6")
+                else f"bj{sym}"
+            )
+            highest_board_codes.append(full_code)
+            snap = snapshots.get(full_code)
+            if snap is None or snap.open <= 0:
+                continue
+            drawdown_from_open = (snap.now - snap.open) / snap.open
+            if drawdown_from_open <= leader_drawdown_max or (not snap.is_limit_up):
+                leader_weak_names.append(f"{snap.name}{drawdown_from_open*100:+.1f}%")
 
         for i in range(len(codes)):
             code = codes[i]
-            if code in alerted:
-                continue
-
             pure_code = code[2:] if len(code) > 2 else code
-            feat = candidates.get(pure_code)
-            if feat is None:
-                continue
-
             now_price = nows[i]
             pre_close = closes[i]
             if now_price <= 0 or pre_close <= 0:
                 continue
 
+            open_price = opens[i] if opens is not None else 0
             pct_chg = pct_chgs[i] if pct_chgs is not None else 0
+            is_limit_up = bool(is_limit_ups[i]) if is_limit_ups is not None else False
 
-            # 条件: 开盘强度 > 阈值
-            open_strength = (now_price - pre_close) / pre_close
-            if open_strength < open_strength_min:
+            feat = candidates.get(pure_code)
+            if feat is not None and code not in premium_alerted:
+                # 条件: 开盘强度 > 阈值
+                open_strength = (now_price - pre_close) / pre_close
+                if open_strength >= open_strength_min:
+                    # 时间窗口：只在开盘阶段触发（09:25~09:40）
+                    if current_time <= "09:45:00":
+                        # 至少要有情绪支撑（一字股或强势股）
+                        if one_word_peers > 0 or strong_peers > 0:
+                            name = names[i] if names is not None else ""
+                            hot_tag = ",热门口" if feat["is_hot_theme"] else ""
+                            peer_desc = (
+                                f", 昨涨停{strong_peers}/{total_peers}强"
+                                f"(一字{one_word_peers}只: {', '.join(peer_info[:3])})"
+                            )
+
+                            alerts.append(Alert(
+                                code=code,
+                                name=name,
+                                strategy_slug=self.slug,
+                                strategy_name=self.name,
+                                message=(
+                                    f"最高板套利: {feat['board_count']}板{feat['name']}, "
+                                    f"开{pct_chg:.1f}%{hot_tag}{peer_desc}"
+                                ),
+                                level="important",
+                            ))
+                            premium_alerted.add(code)
+
+            rotation_feat = rotation_candidates.get(pure_code)
+            if rotation_feat is None or code in rotation_alerted:
                 continue
 
-            # 时间窗口：只在开盘阶段触发（09:25~09:40）
-            if current_time > "09:45:00":
+            if current_time < "09:30:00" or current_time > carding_confirm_by:
                 continue
 
-            # 至少要有情绪支撑（一字股或强势股）
-            if one_word_peers == 0 and strong_peers == 0:
+            if not is_limit_up:
                 continue
 
-            name = names[i] if names is not None else ""
-            hot_tag = ",热门口" if feat["is_hot_theme"] else ""
-            peer_desc = f", 昨涨停{strong_peers}/{total_peers}强(一字{one_word_peers}只: {', '.join(peer_info[:3])})"
+            session_open_strength = (
+                (open_price - pre_close) / pre_close
+                if open_price and pre_close > 0 else 0.0
+            )
+            if session_open_strength < carding_open_strength_min:
+                continue
+
+            same_height_syms = [
+                sym for sym in same_height_groups.get(rotation_feat["board_count"], [])
+                if sym != pure_code
+            ]
+            weak_peer_names = []
+            weak_peer_count = 0
+            for sym in same_height_syms:
+                peer_code = (
+                    f"sz{sym}" if sym.startswith(("0", "1", "2", "3"))
+                    else f"sh{sym}" if sym.startswith("6")
+                    else f"bj{sym}"
+                )
+                snap = snapshots.get(peer_code)
+                if snap is None or snap.open <= 0:
+                    continue
+                peer_drawdown = (snap.now - snap.open) / snap.open
+                if peer_drawdown <= peer_drawdown_max or (not snap.is_limit_up):
+                    weak_peer_count += 1
+                    weak_peer_names.append(f"{snap.name}{peer_drawdown*100:+.1f}%")
+
+            if weak_peer_count < min_weak_peers:
+                continue
+
+            leader_desc = (
+                f"前高标{max_height}板走弱({', '.join(leader_weak_names[:2])})"
+                if leader_weak_names else
+                f"前高标{max_height}板仍在场"
+            )
 
             alerts.append(Alert(
                 code=code,
-                name=name,
+                name=names[i] if names is not None else "",
                 strategy_slug=self.slug,
                 strategy_name=self.name,
                 message=(
-                    f"最高板套利: {feat['board_count']}板{feat['name']}, "
-                    f"开{pct_chg:.1f}%{hot_tag}{peer_desc}"
+                    f"卡位确认: {rotation_feat['board_count']}板{rotation_feat['name']}快速上板, "
+                    f"{leader_desc}, "
+                    f"同身位掉队{weak_peer_count}只({', '.join(weak_peer_names[:2])}), "
+                    f"开盘强度{session_open_strength*100:.1f}%"
                 ),
                 level="important",
             ))
-            alerted.add(code)
+            rotation_alerted.add(code)
 
         return alerts

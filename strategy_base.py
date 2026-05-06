@@ -76,6 +76,7 @@ class BaseStrategy(ABC):
     slug: str = ""              # 唯一标识，如 "trend_breakout"
     name: str = ""              # 中文名，如 "产业趋势突破"
     description: str = ""       # 策略说明
+    signal_role: str = "primary"  # primary | support
 
     def prepare(self, ctx: StrategyContext) -> None:
         """启动时初始化（只调用一次）。

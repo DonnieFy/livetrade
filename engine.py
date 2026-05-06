@@ -216,10 +216,17 @@ class Engine:
 
             strat_cls = registry[slug]
             strat = strat_cls()
+            signal_role = getattr(strat, "signal_role", "primary")
+            review_candidates_mode = getattr(strat, "review_candidates_mode", "review_first")
 
-            candidates_list = self.review_data.get_strategy_candidates(slug)
-            if not candidates_list:
-                candidates_list = strat_config.get("candidates", [])
+            review_candidates = self.review_data.get_strategy_candidates(slug)
+            config_candidates = strat_config.get("candidates", [])
+            if review_candidates_mode == "ignore":
+                candidates_list = config_candidates
+            elif review_candidates_mode == "merge":
+                candidates_list = list(dict.fromkeys([*review_candidates, *config_candidates]))
+            else:
+                candidates_list = review_candidates or config_candidates
             normalized_candidates = [
                 _normalize_candidate_code(code) for code in candidates_list
             ]
@@ -234,7 +241,7 @@ class Engine:
                 tick_history=self._tick_history,
             )
 
-            logger.info(f"初始化策略: {strat}")
+            logger.info(f"初始化策略: {strat} role={signal_role}")
 
             try:
                 strat.prepare(ctx)

@@ -12,6 +12,7 @@ Livetrade — 文件监听与增量读取
 
 from __future__ import annotations
 
+import csv
 import gzip
 import logging
 import os
@@ -42,6 +43,11 @@ class TickWatcher:
 
         # 文件偏移量记录 {phase: byte_offset}
         self._offsets: dict[str, int] = {}
+        # 末尾未写完的单行缓存 {phase: partial_line}
+        self._partial_lines: dict[str, str] = {}
+        # 跨轮询未完成的 tick_time 桶缓存 {phase: {tick_time: lines}}
+        self._pending_frame_buckets: dict[str, dict[str, list[str]]] = {}
+        self._pending_frame_updated_at: dict[str, float] = {}
 
     def _get_csv_path(self, phase: str) -> str:
         """获取阶段对应的 CSV 文件路径。"""
@@ -90,45 +96,119 @@ class TickWatcher:
             # 文件被截断或替换，重置偏移量
             logger.warning(f"[{phase}] 文件被截断/替换，重置偏移量")
             last_offset = 0
+            self._partial_lines.pop(phase, None)
+            self._pending_frame_buckets.pop(phase, None)
+            self._pending_frame_updated_at.pop(phase, None)
 
         if current_size <= last_offset:
+            self._maybe_flush_pending_frame(phase)
             return  # 无新数据
 
-        # 逐块增量读取，避免一次性加载过大内存(OOM)
+        # 按真实 tick_time 聚合帧，而不是按任意 10000 行整块回调。
+        # 这样竞价策略才能正确识别 09:20 前后切换、末尾回封等时序信号。
         with open(csv_path, "r", encoding="utf-8") as f:
             f.seek(last_offset)
-            
-            frame_lines = []
-            
-            while True:
-                line = f.readline()
-                if not line:
-                    break
-                    
-                frame_lines.append(line)
-                
-                if len(frame_lines) >= 10000:
-                    df = parse_csv_text("".join(frame_lines))
-                    if not df.empty:
-                        tick_time = extract_tick_time(df) or ""
-                        logger.debug(
-                            f"[{phase}] 增量读取块: {len(df)} 行, "
-                            f"tick_time={tick_time}"
-                        )
-                        self.callback(phase, df, tick_time)
-                    frame_lines = []
-                    
-            if frame_lines:
-                df = parse_csv_text("".join(frame_lines))
-                if not df.empty:
-                    tick_time = extract_tick_time(df) or ""
-                    logger.debug(
-                        f"[{phase}] 增量读取末块: {len(df)} 行, "
-                        f"tick_time={tick_time}"
-                    )
-                    self.callback(phase, df, tick_time)
 
+            raw_text = f.read()
             self._offsets[phase] = f.tell()
+
+        if not raw_text:
+            return
+
+        raw_text = self._partial_lines.get(phase, "") + raw_text
+        if raw_text.endswith("\n"):
+            lines = raw_text.splitlines(keepends=True)
+            self._partial_lines[phase] = ""
+        else:
+            lines = raw_text.splitlines(keepends=True)
+            if lines:
+                self._partial_lines[phase] = lines.pop()
+            else:
+                self._partial_lines[phase] = raw_text
+                return
+
+        buckets = {
+            tick_time: lines.copy()
+            for tick_time, lines in self._pending_frame_buckets.get(phase, {}).items()
+        }
+
+        for line in lines:
+            tick_time = self._extract_time_from_line(line)
+            if not tick_time:
+                logger.debug(f"[{phase}] 跳过无法解析 time 的原始行")
+                continue
+
+            buckets.setdefault(tick_time, []).append(line)
+
+        if buckets:
+            tick_times = sorted(buckets)
+            latest_tick_time = tick_times[-1]
+            for tick_time in tick_times[:-1]:
+                self._emit_frame(phase, buckets[tick_time], tick_time)
+
+            self._pending_frame_buckets[phase] = {
+                latest_tick_time: buckets[latest_tick_time]
+            }
+            self._pending_frame_updated_at[phase] = time.time()
+        else:
+            self._pending_frame_buckets.pop(phase, None)
+            self._pending_frame_updated_at.pop(phase, None)
+
+    def flush_pending(self) -> None:
+        """将当前缓存中的尾帧强制输出。
+
+        适用于文件已写完或回测结束前的收尾阶段，避免最后一个 tick_time
+        因为等待下一帧边界而一直滞留在缓存里。
+        """
+        for phase in config.ALL_PHASES:
+            buckets = self._pending_frame_buckets.pop(phase, None) or {}
+            self._partial_lines.pop(phase, None)
+            self._pending_frame_updated_at.pop(phase, None)
+            for tick_time in sorted(buckets):
+                self._emit_frame(phase, buckets[tick_time], tick_time)
+
+    @staticmethod
+    def _extract_time_from_line(line: str) -> str:
+        """从单行原始 CSV 中提取 time 列。"""
+        try:
+            row = next(csv.reader([line]))
+        except Exception:
+            return ""
+        if len(row) != len(config.CSV_COLUMNS):
+            return ""
+        return str(row[-1]).strip()
+
+    def _emit_frame(self, phase: str, frame_lines: list[str], tick_time: str) -> None:
+        """解析并回调单个真实 tick_time 帧。"""
+        if not frame_lines or not tick_time:
+            return
+
+        df = parse_csv_text("".join(frame_lines))
+        if df.empty:
+            return
+
+        parsed_tick_time = extract_tick_time(df) or tick_time
+        logger.debug(
+            f"[{phase}] 增量读取帧: {len(df)} 行, "
+            f"tick_time={parsed_tick_time}"
+        )
+        self.callback(phase, df, parsed_tick_time)
+
+    def _maybe_flush_pending_frame(self, phase: str) -> None:
+        """若某帧在一轮轮询内没有再增长，则认为该帧已写完并输出。"""
+        buckets = self._pending_frame_buckets.get(phase) or {}
+        updated_at = self._pending_frame_updated_at.get(phase, 0.0)
+        if not buckets or updated_at <= 0:
+            return
+
+        idle_seconds = time.time() - updated_at
+        if idle_seconds < config.WATCHER_POLL_INTERVAL:
+            return
+
+        self._pending_frame_buckets.pop(phase, None)
+        self._pending_frame_updated_at.pop(phase, None)
+        for tick_time in sorted(buckets):
+            self._emit_frame(phase, buckets[tick_time], tick_time)
 
 
 class ReplayWatcher:
@@ -168,8 +248,10 @@ class ReplayWatcher:
         "ask2_volume", "ask2",
     ]
 
+    _CHUNK_SIZE = 300_000
+
     def _replay_phase(self, phase: str) -> None:
-        """回放单个阶段 — 分块加载 + 提前过滤 + 预计算 + 按帧回调。"""
+        """回放单个阶段 — 流式分块加载 + 按帧回调。"""
         gz_path = os.path.join(
             self.data_dir, f"{self.date_string}_{phase}.csv.gz"
         )
@@ -196,10 +278,11 @@ class ReplayWatcher:
         essential = set(self._ESSENTIAL_COLUMNS)
         usecols = [c for c in config.CSV_COLUMNS if c in essential]
 
-        # 分块读取 + 提前过滤
         has_time_filter = self.time_range is not None
-        chunks = []
         total_raw = 0
+        total_kept = 0
+        frame_count = 0
+        tail_df: pd.DataFrame | None = None
         try:
             for chunk in pd.read_csv(
                 file_path,
@@ -208,7 +291,7 @@ class ReplayWatcher:
                 compression=compression,
                 dtype=str,
                 usecols=usecols,
-                chunksize=1_000_000,
+                chunksize=self._CHUNK_SIZE,
             ):
                 total_raw += len(chunk)
                 if has_time_filter and "time" in chunk.columns:
@@ -217,12 +300,27 @@ class ReplayWatcher:
                         (chunk["time"] >= t_start) & (chunk["time"] <= t_end)
                     ]
                 if not chunk.empty:
-                    chunks.append(chunk)
+                    total_kept += len(chunk)
+                    prepared = self._prepare_chunk(chunk)
+                    if tail_df is not None and not tail_df.empty:
+                        prepared = pd.concat([tail_df, prepared], ignore_index=True)
+
+                    last_tick_time = str(prepared.iloc[-1]["time"]).strip()
+                    if not last_tick_time:
+                        tail_df = None
+                        continue
+
+                    is_last_time = prepared["time"].astype(str).str.strip() == last_tick_time
+                    emit_df = prepared.loc[~is_last_time]
+                    tail_df = prepared.loc[is_last_time].reset_index(drop=True)
+
+                    if not emit_df.empty:
+                        frame_count += self._emit_grouped_frames(phase, emit_df)
         except Exception as e:
             logger.error(f"[{phase}] 打开文件失败: {e}")
             return
 
-        if not chunks:
+        if total_kept == 0:
             if has_time_filter:
                 logger.info(
                     f"[{phase}] 时间裁剪 {self.time_range[0]}~{self.time_range[1]}: "
@@ -233,21 +331,28 @@ class ReplayWatcher:
 
         t_load = _time.time()
 
-        if len(chunks) == 1:
-            df = chunks[0]
-        else:
-            df = pd.concat(chunks, ignore_index=True)
-
         if has_time_filter:
             logger.info(
                 f"[{phase}] 时间裁剪 {self.time_range[0]}~{self.time_range[1]}: "
-                f"{total_raw}→{len(df)} 行 (裁剪 {total_raw - len(df)} 行)"
+                f"{total_raw}→{total_kept} 行 (裁剪 {total_raw - total_kept} 行)"
             )
 
-        # 释放 chunks 内存
-        del chunks
+        t_numeric = _time.time()
+        t_calc = _time.time()
+        if tail_df is not None and not tail_df.empty:
+            frame_count += self._emit_grouped_frames(phase, tail_df)
 
-        # 批量转换数值列
+        t_end = _time.time()
+        logger.info(
+            f"[{phase}] 回放完成，共 {frame_count} 帧 "
+            f"(加载 {t_load - t0:.1f}s, 数值转换 {t_numeric - t_load:.1f}s, "
+            f"预计算 {t_calc - t_numeric:.1f}s, 回放 {t_end - t_calc:.1f}s)"
+        )
+
+    def _prepare_chunk(self, df: pd.DataFrame) -> pd.DataFrame:
+        """对单个分块做数值转换和衍生列预计算。"""
+        df = df.copy()
+
         numeric_in_df = [c for c in config.NUMERIC_COLUMNS if c in df.columns]
         for col in numeric_in_df:
             arr = df[col].values
@@ -256,9 +361,6 @@ class ReplayWatcher:
             except (ValueError, TypeError):
                 df[col] = pd.to_numeric(arr, errors="coerce")
 
-        t_numeric = _time.time()
-
-        # 预计算衍生列
         close_vals = df["close"].values
         now_vals = df["now"].values
         codes = df["code"].values
@@ -282,22 +384,18 @@ class ReplayWatcher:
         df["limit_down_price"] = np.round(close_vals * (1 - limit_ratios), 2)
         df["is_limit_up"] = now_vals >= df["limit_up_price"].values
         df["is_limit_down"] = now_vals <= df["limit_down_price"].values
+        df["time"] = df["time"].astype(str).str.strip()
 
-        t_calc = _time.time()
+        return df
 
-        # 按 time 分帧回调
+    def _emit_grouped_frames(self, phase: str, df: pd.DataFrame) -> int:
+        """将已预处理分块按 tick_time 分帧回调。"""
         frame_count = 0
-        for tick_time, frame_df in df.groupby("time", sort=True):
+        for tick_time, frame_df in df.groupby("time", sort=False):
             frame_df = frame_df.reset_index(drop=True)
             self.callback(phase, frame_df, str(tick_time))
             frame_count += 1
-
-        t_end = _time.time()
-        logger.info(
-            f"[{phase}] 回放完成，共 {frame_count} 帧 "
-            f"(加载 {t_load - t0:.1f}s, 数值转换 {t_numeric - t_load:.1f}s, "
-            f"预计算 {t_calc - t_numeric:.1f}s, 回放 {t_end - t_calc:.1f}s)"
-        )
+        return frame_count
 
     def stop(self) -> None:
         """回放模式无需停止。"""

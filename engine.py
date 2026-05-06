@@ -272,6 +272,12 @@ class Engine:
         except KeyboardInterrupt:
             logger.info("收到中断信号，停止引擎")
         finally:
+            flush_pending = getattr(watcher, "flush_pending", None)
+            if callable(flush_pending):
+                try:
+                    flush_pending()
+                except Exception as e:
+                    logger.error(f"watcher.flush_pending() 失败: {e}", exc_info=True)
             watcher.stop()
 
     def _compute_backtest_time_range(self) -> tuple[str, str] | None:

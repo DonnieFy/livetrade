@@ -59,9 +59,11 @@ class StockSnapshot:
     code: str = ""
     name: str = ""
     close: float = 0.0      # 昨收盘价（当日不变）
+    now: float = 0.0        # 当前价（每帧更新）
     open: float = 0.0       # 开盘价（第一笔 tick 后不变）
     high: float = 0.0       # 当日最高（running max）
     low: float = 999999.0   # 当日最低（running min）
+    volume: float = 0.0     # 最新成交额（累计，每帧更新）
     turnover: float = 0.0   # 最新成交量（累计，每帧更新）
     pct_chg: float = 0.0    # 最新涨跌幅
     is_limit_up: bool = False

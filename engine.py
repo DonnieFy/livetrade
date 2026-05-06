@@ -462,6 +462,7 @@ class Engine:
                     code=code,
                     name=names[i] if names is not None else "",
                     close=close_price,
+                    now=now_price,
                     open=now_price,
                     high=now_price,
                     low=now_price,
@@ -477,6 +478,7 @@ class Engine:
                 snap.low = now_price
 
             # 更新缓变字段
+            snap.now = now_price
             if now_price > snap.high:
                 snap.high = now_price
             if now_price < snap.low:

@@ -4,60 +4,77 @@ date: "2026-04-02"
 
 strategies:
   # ======================================================
-  # 产业趋势突破策略 (暂时禁用)
+  # 产业趋势突破策略
   # ======================================================
   trend_breakout:
-    enabled: false
+    enabled: true
     phases: ["trading"]
     time_range: ["09:30", "14:57"]
     candidates: []
     params:
       breakout_pct: 0.02
       lookback_ticks: 10
-      min_amount: 0
+      min_amount: 50000000
 
   # ======================================================
-  # 竞价强度异动策略 (暂时禁用)
+  # 竞价强度异动策略
   # ======================================================
   auction_strength:
-    enabled: false
+    enabled: true
     phases: ["auction_open"]
     time_range: null
     candidates: []
     params:
-      vol_multiple_threshold: 2.0
-      min_bid_ask_ratio: 1.5
-      min_open_strength: 0.02
+      vol_multiple_threshold: 2.5
+      min_open_strength: 0.03
+      top_amount_rank_max: 12            # 容量确认只看竞价成交额前排
+      top_strength_rank_max: 8           # 只看综合强度前排
+      min_auction_amount: 30000000       # 竞价额至少3000万
+      min_strong_peers: 2                # 昨日涨停池至少2只同步强
+      min_peer_ratio: 0.10               # 或者至少10%同步强
+      lift_confirm_time: "09:24:30"      # 爆量抬价确认主要看竞价末段
+      min_lift_open_strength: 0.08       # 至少高开8%
+      min_lift_growth_ratio: 0.25        # 竞价额或撮合量较首观察值至少增25%
+      lift_vol_multiple_threshold: 1.0   # 抬价型不要求像封板型那样极端放量
+      near_limit_ratio: 0.998            # 价格贴近涨停也算抬价成功
       daily_amount_unit: 1000.0           # 日线amount到tick成交额的换算系数(千元->元)
 
   # ======================================================
-  # 冰点修复策略 (暂时禁用)
+  # 冰点修复策略
   # ======================================================
   ice_point_repair:
-    enabled: false
+    enabled: true
     phases: ["trading", "auction_close"]
     time_range: null
     candidates: []
     params:
-      min_reversal_pct: 3.0
+      min_reversal_pct: 4.0
       min_volume_surge: 2.0
 
   # ======================================================
   # 竞价涨停加单策略 ★ 新策略
   # ======================================================
   auction_limit_chase:
-    enabled: false
+    enabled: true
     phases: ["auction_open"]             # 仅竞价开盘阶段
     time_range: null                      # 策略内部自行区分 9:20 前后
-    candidates:                           # 冰点日稀缺涨停，重点跟踪
-      - "600488"   # 津药药业 — 5板破天花板，医药情绪锚
-      - "002038"   # 双鹭药业 — 异动7天首板，医药辨识度高，看是否加速
-      - "601872"   # 招商轮船 — 美伊战争64亿炸板，看是否有二板
+    candidates: []
     params:
-      seal_threshold: 30000000            # 条件3: 稳态大封阈值 (3000万)
-      sudden_increase_threshold: 20000000 # 条件1: 单帧巨量增加阈值 (2000万)
-      accel_min_ticks: 3                  # 条件2: 加速判断最少连续递增帧数
-      exclude_threshold: 50000000         # 排除: 封单基准值 min(pre920_last, post920_first) 超此值
+      seal_threshold: 30000000            # 转瞬封住至少要有3000万级封单
+      sudden_increase_threshold: 20000000 # 单帧巨量增加阈值 (2000万)
+      accel_min_ticks: 3                  # 加速判断最少连续递增帧数
+      top_rank_max: 3                     # 只看当前竞价封单最强前三
+      min_growth_ratio: 0.08              # 相对9:20基准封单至少增强8%
+      min_reseal_delta: 5000000           # 或绝对新增封单至少500万
+      new_seal_cutoff: "09:22:30"         # 转瞬封住机会只看早期窗口
+      new_seal_pre920_ceiling: 5000000    # 9:20前封单不超过500万，才算“未封住”
+      late_reseal_cutoff: "09:24:30"      # 末尾回封只看竞价最后半分钟
+      late_reseal_min_bid2: 100000        # 回封后至少恢复10万股显性封单
+      late_reseal_min_ask2_drop: 1000000  # ask2 至少骤减100万股
+      late_reseal_min_ask2_drop_ratio: 0.7 # ask2 至少收缩70%
+      guide_rank_max: 2                   # 一字指引只看最强前二
+      guide_seal_threshold: 100000000     # 一字指引至少1亿封单
+      guide_min_ticks: 2                  # 连续观察2帧再确认
 
   # ======================================================
   # 盘面脉搏策略 ★
@@ -72,19 +89,21 @@ strategies:
   # 首板1进2策略 ★ 新策略
   # ======================================================
   first_board_1to2:
-    enabled: false
+    enabled: true
     phases: ["auction_open"]             # 仅竞价开盘阶段
     time_range: null
     candidates: []                        # 留空表示全市场扫描
     params:
       lookback_days: 10                   # 首板前回看天数
-      volatility_threshold: 4.0           # 首板前涨跌幅阈值（±4%）
-      max_amount_yi: 15.0                 # 最大成交额（亿元）
+      volatility_threshold: 3.0           # 更偏低波动的首板
+      max_amount_yi: 10.0                 # 限制在更聚焦的中小成交额
       daily_amount_unit: 1000.0           # 日线amount到tick成交额的换算系数(千元->元)
       auction_amount_ratio_min: 0.10      # 竞价金额比例最小值（1/10）
       auction_amount_ratio_max: 0.125     # 竞价金额比例最大值（1/8）
-      min_open_strength: 0.02             # 最小高开幅度（2%）
-      top_n: 3                           # 输出TOP N
+      min_open_strength: 0.03             # 最小高开幅度（3%）
+      max_open_strength: 0.07             # 过高开容易直接变成被动接力
+      min_score: 55.0                     # 评分不到线则不报
+      top_n: 2                            # 只留更靠前的机会
 
   # ======================================================
   # 波动率收敛突破策略 ★ 新策略
@@ -98,9 +117,13 @@ strategies:
       rally_gain_pct: 80.0                # 条件1: 最小拉升幅度(%)
       rally_max_days: 15                  # 条件1: 拉升最大天数
       rally_lookback: 60                  # 条件1: 回看总天数
-      ma_proximity: 0.05                  # 条件2: 距MA20的最大偏离(5%)
+      ma_proximity: 0.03                  # 更贴近MA20
       vol_expand_multiple: 1.5            # 条件4: 今日振幅/近3日平均振幅的倍数
-      volume_ratio: 1.2                   # 条件5: 今日量/5日均量比
+      volume_ratio: 1.5                   # 条件5: 今日量/5日均量比
+      min_prev_amount_yi: 8.0             # 只看有容量的趋势中军
+      breakout_pct_min: 0.01              # 至少有效突破前高1%
+      hold_ticks_min: 2                   # 站稳至少2帧
+      top_strength_rank_max: 5            # 只报最强前5
       daily_amount_unit: 1000.0           # 日线amount到tick成交额的换算系数(千元->元)
 
   # ======================================================
@@ -112,12 +135,21 @@ strategies:
     time_range: ["09:15", "10:00"]
     candidates: []                        # 留空表示全市场扫描
     params:
-      extreme_days_min: 5                 # 条件1: 近10天涨跌停天数下限
+      extreme_days_min: 6                 # 只看更极端、更强的一批
       lookback_days: 10                   # 条件1: 回看天数
-      volume_expand_ratio: 1.2            # 条件3: 昨日量/5日均量比
-      open_strength_min: 0.09             # 条件4: 开盘涨幅下限(9%)
+      volume_expand_ratio: 1.5            # 条件3: 昨日量/5日均量比
+      rebound_volume_expand_ratio: 1.0    # 高波动反包分支: 昨日量能不低于5日均额
+      swing_vol_pct: 6.0                  # 高波动反包分支: 单日大波动阈值
+      swing_days_min: 4                   # 高波动反包分支: 最近10天至少4天大波动
+      swing_up_pct: 8.0                   # 高波动反包分支: 至少有大涨日
+      swing_down_pct: -5.0                # 高波动反包分支: 至少有大跌日
+      open_strength_min: 0.095            # 条件4: 开盘涨幅下限(9.5%)
       limit_approach_pct: 0.99            # 条件5: 接近涨停价的百分比
       limit_approach_by_time: "09:40:00"  # 条件5: 限时
+      rebound_open_strength_min: 0.03     # 高波动反包分支: 允许更温和高开
+      rebound_limit_by_time: "09:32:00"   # 高波动反包分支: 必须早盘快速封板
+      min_strong_peers: 2                 # 至少要有2只同袍强势
+      min_peer_strength_ratio: 0.12       # 昨日涨停股里至少12%继续强
 
   # ======================================================
   # 最高板板块共振低吸策略 ★ 新策略
@@ -143,12 +175,21 @@ strategies:
     time_range: ["09:30", "14:57"]
     candidates: []
     params:
-      vol_expand_multiple: 1.5            # 日内振幅/近5日平均振幅的倍数
-      volume_ratio: 1.0                   # 量能比(0=不检查)
+      vol_expand_multiple: 1.8            # 日内振幅/近5日平均振幅的倍数
+      volume_ratio: 1.2                   # 量能比
       daily_amount_unit: 1000.0           # 日线amount到tick成交额的换算系数(千元->元)
-      recent_rally_pct: 3.0               # 近5日最大单日涨幅下限(%)
+      recent_rally_pct: 5.0               # 近5日最大单日涨幅下限(%)
       recent_days: 5                      # 短期走强回看天数
       rv_min: 0.001                       # tick级RV绝对值下限(0=不过滤)
+      breakout_pct_min: 0.01              # 至少有效突破昨高1%
+      min_amount_yi: 8.0                  # 只看有容量的趋势股
+      rotation_min_amount_yi: 30.0        # 主线容量回流分支: 昨日至少30亿
+      rotation_min_close_vs_ma20: 0.15    # 主线容量回流分支: 相对MA20有足够趋势斜率
+      rotation_min_recent_rally_pct: 4.0  # 主线容量回流分支: 近5日至少有明显上涨日
+      rotation_reclaim_pct: 0.001         # 主线容量回流分支: 至少收复昨收0.1%
+      rotation_min_rebound_pct: 0.015     # 主线容量回流分支: 自日内低点反拉至少1.5%
+      rotation_confirm_by: "09:36:00"     # 主线容量回流分支: 只看早盘前6分钟
+      rotation_volume_ratio: 0.08         # 主线容量回流分支: 早盘成交额至少达到5日均额的8%
 
   # ======================================================
   # 连板错杀低吸策略 ★ 新策略
@@ -176,6 +217,12 @@ strategies:
       open_strength_min: 0.05             # 开盘涨幅下限(5%)
       peer_limit_pct: 0.08                # 同袍强势判定涨幅(8%)
       max_board_count: 3                  # 最高板数量上限(<=N只才触发)
+      carding_gap_max: 2                  # 卡位候选距离最高板最多2板
+      carding_confirm_by: "09:35:00"      # 卡位确认只看早盘前5分钟
+      carding_open_strength_min: 0.04     # 候选至少强开4%
+      leader_drawdown_max: -0.005         # 前高标相对开盘回撤0.5%视为转弱
+      peer_drawdown_max: -0.005           # 同身位对手相对开盘回撤0.5%视为掉队
+      min_weak_peers: 1                   # 至少1个同身位对手掉队
 
   # ======================================================
   # 首板1+1策略 ★ 新策略
@@ -186,8 +233,10 @@ strategies:
     time_range: ["09:30", "14:57"]
     candidates: []
     params:
-      volume_ratio: 1.0                   # 量能比(0=不检查)
+      volume_ratio: 1.2                   # 量能比
       daily_amount_unit: 1000.0           # 日线amount到tick成交额的换算系数(千元->元)
-      rv_min: 0.0                         # tick级RV下限(0=不过滤)
-      breakout_pct_min: 0.01              # 突破昨高最低幅度(1%)
-      pct_chg_min: 0.04                   # 突破时最低涨幅(4%)
+      rv_min: 0.001                       # 要求有明显分时动能
+      breakout_pct_min: 0.015             # 突破昨高最低幅度(1.5%)
+      pct_chg_min: 0.05                   # 突破时最低涨幅(5%)
+      volatility_expand_ratio: 1.0        # 允许以“日内振幅>=昨日振幅”替代放量确认
+      min_rebound_pct: 0.05               # 自日内低点至少反拉5%才视为脱离昨日成本区

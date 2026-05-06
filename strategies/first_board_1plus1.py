@@ -12,14 +12,14 @@
     1. 前天(倒数第2个交易日)首板涨停
     2. 昨天未涨停（断板），但形态尚好（收盘 > MA5）
     3. 今天分时突破昨日最高价，且突破幅度 >= breakout_pct_min（过滤假突破）
-    4. 放量确认（成交量放大）
+    4. 放量确认或波动率放大确认
 
 prepare() 阶段:
     - 读取日线，检测条件1~2，记录昨日最高价
 
 on_tick() 阶段:
     - 检测分时价格突破昨日最高价
-    - 检测放量确认
+    - 检测放量确认或快速脱离昨日成本区
 """
 
 from __future__ import annotations
@@ -49,6 +49,7 @@ class FirstBoard1Plus1Strategy(BaseStrategy):
     slug = "first_board_1plus1"
     name = "首板1+1"
     description = "前天首板、昨天断板，今日突破昨高构成1+1买点"
+    signal_role = "support"
 
     def prepare(self, ctx: StrategyContext) -> None:
         klines = load_klines()
@@ -68,6 +69,8 @@ class FirstBoard1Plus1Strategy(BaseStrategy):
         rv_min = ctx.params.get("rv_min", 0.0)
         breakout_pct_min = ctx.params.get("breakout_pct_min", 0.0)
         pct_chg_min = ctx.params.get("pct_chg_min", 0.0)
+        volatility_expand_ratio = float(ctx.params.get("volatility_expand_ratio", 1.0))
+        min_rebound_pct = float(ctx.params.get("min_rebound_pct", 0.05))
         daily_amount_unit = float(ctx.params.get("daily_amount_unit", 1000.0))
 
         # 需要3天: 前天(首板日)、昨天(断板日)、今天(交易日)
@@ -143,11 +146,14 @@ class FirstBoard1Plus1Strategy(BaseStrategy):
 
             # 记录
             candidates[sym_str] = {
+                "yesterday_open": float(yd["open"]),
                 "yesterday_high": float(yd["high"]),
+                "yesterday_low": float(yd["low"]),
                 "yesterday_close": float(yd["close"]),
                 "yesterday_amount": float(yd.get("amount", 0)) * daily_amount_unit,
                 "yesterday_pre_close": yd_pre_close,
                 "day_before_close": float(db["close"]),
+                "yesterday_amplitude": float(yd.get("amplitude", 0) or 0),
                 "ma5": ma5,
             }
 
@@ -157,6 +163,8 @@ class FirstBoard1Plus1Strategy(BaseStrategy):
         ctx.state["rv_min"] = rv_min
         ctx.state["breakout_pct_min"] = breakout_pct_min
         ctx.state["pct_chg_min"] = pct_chg_min
+        ctx.state["volatility_expand_ratio"] = volatility_expand_ratio
+        ctx.state["min_rebound_pct"] = min_rebound_pct
         ctx.state["daily_amount_unit"] = daily_amount_unit
         ctx.state["alerted_codes"] = set()
 
@@ -178,6 +186,8 @@ class FirstBoard1Plus1Strategy(BaseStrategy):
         rv_min = ctx.state.get("rv_min", 0.0)
         breakout_pct_min = ctx.state.get("breakout_pct_min", 0.0)
         pct_chg_min = ctx.state.get("pct_chg_min", 0.0)
+        volatility_expand_ratio = ctx.state.get("volatility_expand_ratio", 1.0)
+        min_rebound_pct = ctx.state.get("min_rebound_pct", 0.05)
         # 增量维护每只候选股的价格序列，避免每帧扫描全量tick_history
         price_bufs: dict[str, list[float]] = ctx.state.get("_price_bufs", {})
         buf_window = 10
@@ -190,6 +200,9 @@ class FirstBoard1Plus1Strategy(BaseStrategy):
         names = frame["name"].values if "name" in frame.columns else None
         volumes = frame["volume"].values if "volume" in frame.columns else None
         pct_chgs = frame["pct_chg"].values if "pct_chg" in frame.columns else None
+        highs = frame["high"].values if "high" in frame.columns else None
+        lows = frame["low"].values if "low" in frame.columns else None
+        snapshots = ctx.stock_snapshots
 
         for i in range(len(codes)):
             code = codes[i]
@@ -231,16 +244,42 @@ class FirstBoard1Plus1Strategy(BaseStrategy):
             rv = 0.0
             if rv_min > 0 and len(buf) >= 5:
                 rv = calc_tick_rv(np.array(buf))
-                if rv < rv_min:
-                    continue
 
-            # 放量确认（可选）
+            # 放量不再是唯一条件，允许“缩量快速脱离昨日成本区 + 波动率放大”先触发
+            today_amount = volumes[i] if volumes is not None else 0
+            volume_confirmed = True
             if volume_ratio_threshold > 0 and feat["yesterday_amount"] > 0:
-                today_amount = volumes[i] if volumes is not None else 0
-                if today_amount < feat["yesterday_amount"] * volume_ratio_threshold:
-                    continue
+                volume_confirmed = today_amount >= feat["yesterday_amount"] * volume_ratio_threshold
+
+            snap = snapshots.get(code)
+            intraday_high = 0.0
+            intraday_low = 0.0
+            if snap and snap.high > 0 and 0 < snap.low < 999999:
+                intraday_high = float(snap.high)
+                intraday_low = float(snap.low)
+            else:
+                intraday_high = float(highs[i]) if highs is not None else now_price
+                intraday_low = float(lows[i]) if lows is not None else now_price
+
+            rebound_pct = (
+                (now_price - intraday_low) / pre_close
+                if pre_close > 0 and intraday_low > 0 else 0.0
+            )
+            intraday_amplitude = (
+                (intraday_high - intraday_low) / pre_close * 100
+                if pre_close > 0 and intraday_high > 0 and intraday_low > 0 else 0.0
+            )
+            volatility_confirmed = (
+                rebound_pct >= min_rebound_pct
+                and intraday_amplitude >= feat["yesterday_amplitude"] * volatility_expand_ratio
+            )
+
+            rv_confirmed = (rv_min <= 0) or (rv >= rv_min)
+            if not ((volume_confirmed or volatility_confirmed) and (rv_confirmed or volatility_confirmed)):
+                continue
 
             name = names[i] if names is not None else ""
+            confirm_tag = "放量确认" if volume_confirmed else "缩量波动放大"
 
             rv_info = f", RV={rv:.4f}" if rv_min > 0 else ""
             alerts.append(Alert(
@@ -252,6 +291,7 @@ class FirstBoard1Plus1Strategy(BaseStrategy):
                     f"1+1突破: 突破昨高{feat['yesterday_high']:.2f}→{now_price:.2f}(+{breakout_pct*100:.1f}%), "
                     f"涨幅{pct_chg:.2f}%, "
                     f"昨收{feat['yesterday_close']:.2f}(断板), 前收{feat['day_before_close']:.2f}(首板)"
+                    f", {confirm_tag}, 日内振幅{intraday_amplitude:.1f}%"
                     f"{rv_info}"
                 ),
                 level="important",

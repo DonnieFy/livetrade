@@ -45,6 +45,7 @@ class FirstBoard1to2Strategy(BaseStrategy):
     slug = "first_board_1to2"
     name = "首板1进2"
     description = "筛选昨日首板且竞价阶段量价配合的股票"
+    signal_role = "support"
 
     def prepare(self, ctx: StrategyContext) -> None:
         """加载日线数据，筛选首板股并计算波动基线。"""
@@ -288,6 +289,8 @@ class FirstBoard1to2Strategy(BaseStrategy):
         ratio_min = ctx.state.get("auction_amount_ratio_min", 0.10)
         ratio_max = ctx.state.get("auction_amount_ratio_max", 0.125)
         min_open = ctx.state.get("min_open_strength", 0.02)
+        max_open = ctx.params.get("max_open_strength", 0.0)
+        min_score = ctx.params.get("min_score", 0.0)
 
         # 收集所有符合条件的候选股票并评分
         candidates = []
@@ -315,6 +318,8 @@ class FirstBoard1to2Strategy(BaseStrategy):
             open_strength = (now_price - close_price) / close_price
             if open_strength < min_open:
                 continue
+            if max_open > 0 and open_strength > max_open:
+                continue
 
             # 竞价金额
             today_volume = row.get("volume", 0)  # 这是成交额
@@ -339,7 +344,10 @@ class FirstBoard1to2Strategy(BaseStrategy):
 
         # 按评分排序，取TOP 3
         candidates.sort(key=lambda x: x["score"], reverse=True)
-        top_candidates = candidates[:ctx.params.get("top_n", 3)]
+        top_candidates = [
+            cand for cand in candidates
+            if cand["score"] >= min_score
+        ][:ctx.params.get("top_n", 3)]
 
         # 生成警报
         for i, cand in enumerate(top_candidates, 1):

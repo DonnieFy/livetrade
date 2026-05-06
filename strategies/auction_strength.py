@@ -5,7 +5,7 @@
 对应逻辑文档策略二 — 情绪连板接力 / 弱转强
 
 核心逻辑:
-    竞价阶段追踪竞价量比、开盘强度、买卖盘力量，
+    竞价阶段追踪竞价量比、开盘强度、价格抬升与撮合放大，
     筛选竞价超预期的弱转强品种。
 
 prepare() 阶段:
@@ -15,7 +15,7 @@ prepare() 阶段:
 on_tick() 阶段:
     - 竞价阶段检测量比（相对昨日成交量的放大倍数）
     - 检测开盘强度（now vs close）
-    - 检测买一卖一力量对比
+    - 检测撮合量/竞价额持续放大
 """
 
 from __future__ import annotations
@@ -37,7 +37,9 @@ logger = logging.getLogger(__name__)
 class AuctionStrengthStrategy(BaseStrategy):
     slug = "auction_strength"
     name = "竞价强度异动"
-    description = "竞价阶段检测量比放大、开盘强度、弱转强等信号"
+    description = "竞价阶段检测量价超预期、接力确认与爆量抬价信号"
+    signal_role = "primary"
+    review_candidates_mode = "ignore"
 
     def prepare(self, ctx: StrategyContext) -> None:
         """加载昨日 K 线数据，计算涨停股和成交量基线。"""
@@ -109,12 +111,32 @@ class AuctionStrengthStrategy(BaseStrategy):
 
         # 策略参数
         ctx.state["vol_multiple_threshold"] = ctx.params.get("vol_multiple_threshold", 2.0)
-        ctx.state["min_bid_ask_ratio"] = ctx.params.get("min_bid_ask_ratio", 1.5)
         ctx.state["min_open_strength"] = ctx.params.get("min_open_strength", 0.02)
+        ctx.state["top_amount_rank_max"] = ctx.params.get("top_amount_rank_max", 10)
+        ctx.state["top_strength_rank_max"] = ctx.params.get("top_strength_rank_max", 8)
+        ctx.state["min_auction_amount"] = float(ctx.params.get("min_auction_amount", 30_000_000))
+        ctx.state["min_strong_peers"] = int(ctx.params.get("min_strong_peers", 2))
+        ctx.state["min_peer_ratio"] = float(ctx.params.get("min_peer_ratio", 0.10))
+        ctx.state["lift_confirm_time"] = ctx.params.get("lift_confirm_time", "09:24:30")
+        ctx.state["min_lift_open_strength"] = float(ctx.params.get("min_lift_open_strength", 0.08))
+        ctx.state["min_lift_growth_ratio"] = float(ctx.params.get("min_lift_growth_ratio", 0.25))
+        ctx.state["lift_vol_multiple_threshold"] = float(
+            ctx.params.get("lift_vol_multiple_threshold", 1.0)
+        )
+        ctx.state["near_limit_ratio"] = float(ctx.params.get("near_limit_ratio", 0.998))
         ctx.state["daily_amount_unit"] = daily_amount_unit
 
         # 已触发过的股票（防重复报警）
         ctx.state["alerted_codes"] = set()
+        ctx.state["post920_ref"] = {}
+        ctx.state["stats"] = {
+            "relay_watch_count": 0,
+            "capacity_watch_count": 0,
+            "lift_watch_count": 0,
+            "relay_alert_count": 0,
+            "capacity_alert_count": 0,
+            "lift_alert_count": 0,
+        }
 
         logger.info(
             f"[{self.slug}] prepare 完成，昨日涨停 {len(limit_up_symbols)} 只，"
@@ -130,59 +152,195 @@ class AuctionStrengthStrategy(BaseStrategy):
         vol_baseline = ctx.state.get("vol_baseline", {})
         alerted = ctx.state.get("alerted_codes", set())
         vol_threshold = ctx.state.get("vol_multiple_threshold", 2.0)
-        min_bid_ask = ctx.state.get("min_bid_ask_ratio", 1.5)
         min_open_strength = ctx.state.get("min_open_strength", 0.02)
+        top_amount_rank_max = ctx.state.get("top_amount_rank_max", 10)
+        top_strength_rank_max = ctx.state.get("top_strength_rank_max", 8)
+        min_auction_amount = ctx.state.get("min_auction_amount", 30_000_000.0)
+        min_strong_peers = ctx.state.get("min_strong_peers", 2)
+        min_peer_ratio = ctx.state.get("min_peer_ratio", 0.10)
+        lift_confirm_time = ctx.state.get("lift_confirm_time", "09:24:30")
+        min_lift_open_strength = ctx.state.get("min_lift_open_strength", 0.08)
+        min_lift_growth_ratio = ctx.state.get("min_lift_growth_ratio", 0.25)
+        lift_vol_multiple_threshold = ctx.state.get("lift_vol_multiple_threshold", 1.0)
+        near_limit_ratio = ctx.state.get("near_limit_ratio", 0.998)
+        min_lift_price_ratio = float(ctx.params.get("min_lift_price_ratio", 0.003))
+        post920_ref = ctx.state.get("post920_ref", {})
+        stats = ctx.state.get("stats", {})
+        current_time = ctx.market.current_time or ""
 
+        ranked_rows = []
         for _, row in frame.iterrows():
             code = row["code"]
-            if code in alerted:
-                continue
-
             pure_code = code[2:] if len(code) > 2 else code
             now_price = row["now"]
-            close_price = row["close"]  # 昨收
+            close_price = row["close"]
             if now_price <= 0 or close_price <= 0:
                 continue
 
-            # 开盘强度
             open_strength = (now_price - close_price) / close_price
-
-            # 买一卖一力量对比
-            bid1_vol = row.get("bid1_volume", 0)
-            ask1_vol = row.get("ask1_volume", 0)
-            bid_ask_ratio = bid1_vol / ask1_vol if ask1_vol > 0 else 0
-
-            # 量比（竞价成交量 vs 昨日全天成交额，仅作为相对判断）
-            today_vol = row.get("volume", 0)
+            matched_volume = float(row.get("bid1_volume", 0) or 0)
+            today_amount = row.get("volume", 0)
             baseline = vol_baseline.get(pure_code, 0)
-            # 竞价阶段量比判断：竞价阶段成交额应该是昨全天的一小部分
-            # 如果竞价阶段已超过昨日的 5%，说明明显放量
-            vol_ratio = today_vol / (baseline * 0.05) if baseline > 0 else 0
+            vol_ratio = today_amount / (baseline * 0.05) if baseline > 0 else 0
+            limit_ratio = 0.2 if pure_code.startswith(("300", "301", "688")) else 0.1
+            limit_up_price = round(close_price * (1 + limit_ratio), 2)
+            near_limit = now_price >= limit_up_price * near_limit_ratio
+            if pure_code not in post920_ref:
+                post920_ref[pure_code] = {
+                    "first_amount": float(today_amount),
+                    "first_matched_volume": matched_volume,
+                    "first_price": float(now_price),
+                }
+            ref = post920_ref[pure_code]
+            amount_growth_ratio = (
+                (today_amount - ref["first_amount"]) / ref["first_amount"]
+                if ref["first_amount"] > 0 else 0.0
+            )
+            matched_growth_ratio = (
+                (matched_volume - ref["first_matched_volume"]) / ref["first_matched_volume"]
+                if ref["first_matched_volume"] > 0 else 0.0
+            )
+            price_lift_pct = (
+                (now_price - ref["first_price"]) / ref["first_price"]
+                if ref["first_price"] > 0 else 0.0
+            )
+            strength_score = (
+                open_strength * 100
+                + min(vol_ratio, 6.0)
+                + min(amount_growth_ratio * 10, 6.0)
+                + (3.0 if near_limit else 0.0)
+            )
+            ranked_rows.append({
+                "code": code,
+                "pure_code": pure_code,
+                "row": row,
+                "open_strength": open_strength,
+                "matched_volume": matched_volume,
+                "today_amount": today_amount,
+                "vol_ratio": vol_ratio,
+                "limit_up_price": limit_up_price,
+                "near_limit": near_limit,
+                "amount_growth_ratio": amount_growth_ratio,
+                "matched_growth_ratio": matched_growth_ratio,
+                "price_lift_pct": price_lift_pct,
+                "strength_score": strength_score,
+            })
 
-            # 信号 1: 昨日涨停 + 今日高开 = 弱转强
-            if pure_code in limit_up_symbols and open_strength >= min_open_strength:
-                msg_parts = [f"昨日涨停今日高开{open_strength*100:.1f}%"]
-                if bid_ask_ratio >= min_bid_ask:
-                    msg_parts.append(f"买盘积极(比{bid_ask_ratio:.1f})")
-                if vol_ratio >= vol_threshold:
-                    msg_parts.append(f"竞价放量{vol_ratio:.1f}x")
+        amount_rank = {
+            item["code"]: idx + 1
+            for idx, item in enumerate(
+                sorted(ranked_rows, key=lambda item: item["today_amount"], reverse=True)
+            )
+        }
+        strength_rank = {
+            item["code"]: idx + 1
+            for idx, item in enumerate(
+                sorted(ranked_rows, key=lambda item: item["strength_score"], reverse=True)
+            )
+        }
 
-                alerts.append(Alert(
-                    code=code,
-                    name=row["name"],
-                    strategy_slug=self.slug,
-                    strategy_name=self.name,
-                    message=", ".join(msg_parts),
-                    level="important",
-                ))
-                alerted.add(code)
+        relay_pool = []
+        for item in ranked_rows:
+            if item["pure_code"] not in limit_up_symbols:
+                continue
+            if item["open_strength"] < min_open_strength:
+                continue
+            if item["vol_ratio"] < vol_threshold:
+                continue
+            relay_pool.append(item)
+
+        strong_peer_count = len(relay_pool)
+        peer_ratio = (
+            strong_peer_count / len(limit_up_symbols)
+            if limit_up_symbols else 0.0
+        )
+
+        for item in ranked_rows:
+            row = item["row"]
+            code = item["code"]
+            if code in alerted:
                 continue
 
-            # 信号 2: 非涨停股但竞价强势放量 + 高开
+            pure_code = item["pure_code"]
+            open_strength = item["open_strength"]
+            today_amount = item["today_amount"]
+            vol_ratio = item["vol_ratio"]
+            a_rank = amount_rank.get(code, 9999)
+            s_rank = strength_rank.get(code, 9999)
+
+            if pure_code in limit_up_symbols:
+                stats["relay_watch_count"] = stats.get("relay_watch_count", 0) + 1
+                if (
+                    open_strength >= min_open_strength
+                    and vol_ratio >= vol_threshold
+                    and strong_peer_count >= min_strong_peers
+                    and peer_ratio >= min_peer_ratio
+                    and s_rank <= top_strength_rank_max
+                ):
+                    alerts.append(Alert(
+                        code=code,
+                        name=row["name"],
+                        strategy_slug=self.slug,
+                        strategy_name=self.name,
+                        message=(
+                            f"接力确认: 高开{open_strength*100:.1f}%, "
+                            f"量比{vol_ratio:.1f}x, "
+                            f"同袍{strong_peer_count}/{len(limit_up_symbols)}强势, "
+                            f"强度排位{s_rank}"
+                        ),
+                        level="important",
+                    ))
+                    stats["relay_alert_count"] = stats.get("relay_alert_count", 0) + 1
+                    alerted.add(code)
+                    continue
+
+                stats["lift_watch_count"] = stats.get("lift_watch_count", 0) + 1
+                if (
+                    current_time >= lift_confirm_time
+                    and open_strength >= min_lift_open_strength
+                    and vol_ratio >= lift_vol_multiple_threshold
+                    and today_amount >= min_auction_amount
+                    and a_rank <= top_amount_rank_max
+                    and s_rank <= top_strength_rank_max
+                    and (
+                        item["near_limit"]
+                        or item["price_lift_pct"] >= min_lift_price_ratio
+                    )
+                    and (
+                        item["amount_growth_ratio"] >= min_lift_growth_ratio
+                        or item["matched_growth_ratio"] >= min_lift_growth_ratio
+                    )
+                ):
+                    price_desc = (
+                        f"价格贴近涨停{item['limit_up_price']:.2f}"
+                        if item["near_limit"] else
+                        f"价格抬升{item['price_lift_pct']:.1%}"
+                    )
+                    alerts.append(Alert(
+                        code=code,
+                        name=row["name"],
+                        strategy_slug=self.slug,
+                        strategy_name=self.name,
+                        message=(
+                            f"爆量抬价确认: 高开{open_strength*100:.1f}%, "
+                            f"竞价额{today_amount/1e8:.2f}亿, 量比{vol_ratio:.1f}x, "
+                            f"撮合增幅{item['matched_growth_ratio']:.0%}, "
+                            f"{price_desc}, 强度排位{s_rank}"
+                        ),
+                        level="important",
+                    ))
+                    stats["lift_alert_count"] = stats.get("lift_alert_count", 0) + 1
+                    alerted.add(code)
+                    continue
+
+            stats["capacity_watch_count"] = stats.get("capacity_watch_count", 0) + 1
             if (
-                open_strength >= min_open_strength * 1.5
+                today_amount >= min_auction_amount
+                and open_strength >= min_open_strength
                 and vol_ratio >= vol_threshold
-                and bid_ask_ratio >= min_bid_ask
+                and a_rank <= top_amount_rank_max
+                and s_rank <= top_strength_rank_max
+                and (not item["near_limit"])
             ):
                 alerts.append(Alert(
                     code=code,
@@ -190,12 +348,30 @@ class AuctionStrengthStrategy(BaseStrategy):
                     strategy_slug=self.slug,
                     strategy_name=self.name,
                     message=(
-                        f"竞价强势: 高开{open_strength*100:.1f}%, "
-                        f"量比{vol_ratio:.1f}x, "
-                        f"买卖比{bid_ask_ratio:.1f}"
+                        f"容量确认: 高开{open_strength*100:.1f}%, "
+                        f"竞价额{today_amount/1e8:.2f}亿, 量比{vol_ratio:.1f}x, "
+                        f"成交额排位{a_rank}, 强度排位{s_rank}"
                     ),
                     level="warn",
                 ))
+                stats["capacity_alert_count"] = stats.get("capacity_alert_count", 0) + 1
                 alerted.add(code)
+                continue
 
+        ctx.state["post920_ref"] = post920_ref
         return alerts
+
+    def on_phase_end(self, phase: str, ctx: StrategyContext) -> None:
+        if phase != config.PHASE_AUCTION_OPEN:
+            return
+        stats = ctx.state.get("stats", {})
+        logger.info(
+            "[%s] auction_open总结: 接力观察=%s, 抬价观察=%s, 容量观察=%s, 接力信号=%s, 抬价信号=%s, 容量信号=%s",
+            self.slug,
+            stats.get("relay_watch_count", 0),
+            stats.get("lift_watch_count", 0),
+            stats.get("capacity_watch_count", 0),
+            stats.get("relay_alert_count", 0),
+            stats.get("lift_alert_count", 0),
+            stats.get("capacity_alert_count", 0),
+        )

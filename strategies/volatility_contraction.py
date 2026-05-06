@@ -30,6 +30,7 @@ import logging
 import numpy as np
 import pandas as pd
 
+import config
 from context import StrategyContext
 from strategy_base import Alert, BaseStrategy, register_strategy
 from strategies.strategy_utils import (
@@ -47,6 +48,7 @@ class VolatilityContractionStrategy(BaseStrategy):
     slug = "volatility_contraction"
     name = "波动率收敛突破"
     description = "大幅拉升后回踩均线、波动率收敛后放量突破前高"
+    signal_role = "support"
 
     def prepare(self, ctx: StrategyContext) -> None:
         klines = load_klines()
@@ -69,6 +71,10 @@ class VolatilityContractionStrategy(BaseStrategy):
         vol_expand_multiple = ctx.params.get("vol_expand_multiple", 1.5)
         volume_ratio = ctx.params.get("volume_ratio", 1.2)
         daily_amount_unit = float(ctx.params.get("daily_amount_unit", 1000.0))
+        min_prev_amount_yi = float(ctx.params.get("min_prev_amount_yi", 8.0))
+        breakout_pct_min = float(ctx.params.get("breakout_pct_min", 0.01))
+        hold_ticks_min = int(ctx.params.get("hold_ticks_min", 2))
+        top_strength_rank_max = int(ctx.params.get("top_strength_rank_max", 5))
 
         # 取最近60天数据用于计算
         recent_dates = prev_dates[-rally_lookback:]
@@ -99,6 +105,7 @@ class VolatilityContractionStrategy(BaseStrategy):
 
             # 条件2: 当前股价在MA20附近
             ma20 = float(closes[-20:].mean())
+            ma60 = float(closes[-60:].mean()) if len(closes) >= 60 else 0.0
             last_close = float(closes[-1])
             if abs(last_close - ma20) / ma20 > ma_proximity:
                 continue
@@ -116,8 +123,13 @@ class VolatilityContractionStrategy(BaseStrategy):
             amplitudes = last_3["amplitude"].values
             avg_amplitude_3d = float(amplitudes.mean())
             avg_amount_5d = float(grp.tail(5)["amount"].mean()) * daily_amount_unit
+            prev_amount_yi = float(grp.iloc[-1]["amount"]) / 100000.0
             prev_high = float(grp.iloc[-1]["high"])  # 前一日最高价
             pre_close = float(grp.iloc[-1]["close"])  # 前一日收盘价（当日昨收）
+            if prev_amount_yi < min_prev_amount_yi:
+                continue
+            if ma20 <= 0 or ma60 <= 0 or last_close < ma20:
+                continue
 
             candidates[sym] = {
                 "ma20": ma20,
@@ -127,6 +139,7 @@ class VolatilityContractionStrategy(BaseStrategy):
                 "avg_amount_5d": avg_amount_5d,
                 "rally_gain": rally["gain_pct"],
                 "rally_span": rally["span"],
+                "prev_amount_yi": prev_amount_yi,
             }
 
         ctx.state["candidates"] = candidates
@@ -134,7 +147,16 @@ class VolatilityContractionStrategy(BaseStrategy):
         ctx.state["vol_expand_multiple"] = vol_expand_multiple
         ctx.state["volume_ratio"] = volume_ratio
         ctx.state["daily_amount_unit"] = daily_amount_unit
+        ctx.state["breakout_pct_min"] = breakout_pct_min
+        ctx.state["hold_ticks_min"] = hold_ticks_min
+        ctx.state["top_strength_rank_max"] = top_strength_rank_max
         ctx.state["alerted_codes"] = set()
+        ctx.state["breakout_hold"] = {}
+        ctx.state["stats"] = {
+            "watch_count": 0,
+            "passed_breakout_count": 0,
+            "alert_count": 0,
+        }
 
         logger.info(
             f"[{self.slug}] prepare 完成，"
@@ -152,6 +174,11 @@ class VolatilityContractionStrategy(BaseStrategy):
         alerted = ctx.state.get("alerted_codes", set())
         vol_expand_multiple = ctx.state.get("vol_expand_multiple", 1.5)
         volume_ratio_threshold = ctx.state.get("volume_ratio", 1.2)
+        breakout_pct_min = ctx.state.get("breakout_pct_min", 0.01)
+        hold_ticks_min = ctx.state.get("hold_ticks_min", 2)
+        top_strength_rank_max = ctx.state.get("top_strength_rank_max", 5)
+        breakout_hold = ctx.state.get("breakout_hold", {})
+        stats = ctx.state.get("stats", {})
 
         alerts = []
 
@@ -165,15 +192,15 @@ class VolatilityContractionStrategy(BaseStrategy):
         pct_chgs = frame["pct_chg"].values if "pct_chg" in frame.columns else None
 
         snapshots = ctx.stock_snapshots
+        ranked_candidates = []
 
         for i in range(len(codes)):
             code = codes[i]
-            if code in alerted:
-                continue
-
             pure_code = code[2:] if len(code) > 2 else code
             feat = candidates.get(pure_code)
             if feat is None:
+                continue
+            if code in alerted:
                 continue
 
             now_price = nows[i]
@@ -181,9 +208,17 @@ class VolatilityContractionStrategy(BaseStrategy):
             if now_price <= 0 or pre_close <= 0:
                 continue
 
+            stats["watch_count"] = stats.get("watch_count", 0) + 1
+
             # 条件4a: 分时突破前日高点
-            if now_price <= feat["prev_high"]:
+            breakout_line = feat["prev_high"] * (1 + breakout_pct_min)
+            if now_price <= breakout_line:
+                breakout_hold[code] = 0
                 continue
+            breakout_hold[code] = breakout_hold.get(code, 0) + 1
+            if breakout_hold[code] < hold_ticks_min:
+                continue
+            stats["passed_breakout_count"] = stats.get("passed_breakout_count", 0) + 1
 
             # 条件4b: 波动率放大
             snap = snapshots.get(code)
@@ -212,20 +247,58 @@ class VolatilityContractionStrategy(BaseStrategy):
 
             pct_chg = pct_chgs[i] if pct_chgs is not None else 0
             name = names[i] if names is not None else ""
+            strength_score = (
+                pct_chg * 2
+                + (today_amount / 1e8)
+                + intraday_amplitude
+                + min(feat["rally_gain"] / 20, 10)
+            )
+            ranked_candidates.append({
+                "code": code,
+                "name": name,
+                "feat": feat,
+                "now_price": now_price,
+                "pct_chg": pct_chg,
+                "today_amount": today_amount,
+                "intraday_amplitude": intraday_amplitude,
+                "strength_score": strength_score,
+            })
 
+        ranked_candidates.sort(key=lambda item: item["strength_score"], reverse=True)
+        for rank, item in enumerate(ranked_candidates, start=1):
+            if rank > top_strength_rank_max:
+                break
+            code = item["code"]
+            if code in alerted:
+                continue
+            feat = item["feat"]
             alerts.append(Alert(
                 code=code,
-                name=name,
+                name=item["name"],
                 strategy_slug=self.slug,
                 strategy_name=self.name,
                 message=(
-                    f"突破前高 {feat['prev_high']:.2f}→{now_price:.2f}, "
-                    f"涨幅{pct_chg:.2f}%, "
-                    f"振幅放大{intraday_amplitude:.1f}%vs3日均{feat['avg_amplitude_3d']:.1f}%, "
-                    f"此前拉升{feat['rally_gain']:.0f}%/{feat['rally_span']}天"
+                    f"趋势中军突破: 突破前高{feat['prev_high']:.2f}→{item['now_price']:.2f}, "
+                    f"涨幅{item['pct_chg']:.2f}%, 成交额{item['today_amount']/1e8:.2f}亿, "
+                    f"振幅{item['intraday_amplitude']:.1f}%vs3日均{feat['avg_amplitude_3d']:.1f}%, "
+                    f"昨成交额{feat['prev_amount_yi']:.1f}亿, 强度排位{rank}"
                 ),
                 level="important",
             ))
+            stats["alert_count"] = stats.get("alert_count", 0) + 1
             alerted.add(code)
 
+        ctx.state["breakout_hold"] = breakout_hold
         return alerts
+
+    def on_phase_end(self, phase: str, ctx: StrategyContext) -> None:
+        if phase != config.PHASE_TRADING:
+            return
+        stats = ctx.state.get("stats", {})
+        logger.info(
+            "[%s] trading总结: 观察=%s, 有效突破=%s, 最终信号=%s",
+            self.slug,
+            stats.get("watch_count", 0),
+            stats.get("passed_breakout_count", 0),
+            stats.get("alert_count", 0),
+        )

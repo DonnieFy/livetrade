@@ -1,0 +1,17 @@
+[Unit]
+Description=Livetrade Daily Review via Codex CLI
+Documentation=file:///home/fy/myown/livetrade/.agents/skills/daily-review/SKILL.md
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/fy/myown/livetrade
+Environment=TZ=Asia/Shanghai
+Environment=PATH=/home/fy/.nvm/versions/node/v22.19.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=CODEX_BYPASS_SANDBOX=1
+ExecStart=/home/fy/myown/livetrade/scripts/run_daily_review_codex.sh
+TimeoutStartSec=3h
+StandardOutput=journal
+StandardError=journal
+NoNewPrivileges=yes

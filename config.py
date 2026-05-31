@@ -42,6 +42,11 @@ KNOWLEDGE_ASHARES = KNOWLEDGE_ROOT / "knowledge-a-shares"
 # 信号输出目录
 ALERT_OUTPUT_DIR = PROJECT_ROOT / "output"
 
+# 信号题材增强
+ALERT_THEME_INFO_ENABLED = True
+ALERT_THEME_RELATED_LIMIT = 5
+ALERT_THEME_MAX_COUNT = 6
+
 # 策略配置文件
 STRATEGY_CONFIG_FILE = PROJECT_ROOT / "strategy_config.yaml"
 

@@ -25,7 +25,6 @@ from src.indicators.hot_sectors import compute_hot_sectors
 from src.indicators.index_status import compute_index_status
 from src.indicators.buy_opportunities import compute_buy_opportunities
 from src.indicators.star_stocks import compute_star_stocks
-from src.strategy_quant.strategies import run_all_strategies
 
 
 def run(date: str | None = None, top_n: int = 5) -> dict[str, Any]:
@@ -46,12 +45,9 @@ def run(date: str | None = None, top_n: int = 5) -> dict[str, Any]:
     action_analysis = compute_action_indicators(target_date, klines=dc.klines)
     action_trend = compute_action_trend(dc.get_trading_dates(10), klines=dc.klines)
     buy_opportunities = compute_buy_opportunities(dc, board_stats, emotion_cycle)
-    strategies_result = run_all_strategies(
-        target_date,
-        top_n=top_n,
-        klines_df=dc.klines,
-        basic_df=dc.stock_basic,
-    )
+    # Temporarily skip strategy quant: it loads full-day tick data and can be
+    # killed by earlyoom on recent larger tick files.
+    strategies_result = {}
 
     payload = build_machine_payload(
         target_date=target_date,

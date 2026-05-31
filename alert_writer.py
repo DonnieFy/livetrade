@@ -15,6 +15,7 @@ import os
 from datetime import datetime
 
 import config
+from alert_theme_enricher import format_alert_with_theme, warmup_theme_resolver
 from strategy_base import Alert
 
 logger = logging.getLogger(__name__)
@@ -35,6 +36,7 @@ class AlertWriter:
         self.total_alerts = 0
 
         os.makedirs(self.output_dir, exist_ok=True)
+        warmup_theme_resolver()
 
     def write(self, alerts: list[Alert], tick_time: str | None = None) -> None:
         """将 Alert 列表写入文件。
@@ -56,7 +58,7 @@ class AlertWriter:
         filepath = os.path.join(self.output_dir, filename)
 
         # 格式化内容
-        lines = [alert.format_line() for alert in alerts]
+        lines = [format_alert_with_theme(alert) for alert in alerts]
         content = "\n".join(lines) + "\n"
 
         # 写入模式
@@ -73,8 +75,8 @@ class AlertWriter:
         logger.info(
             f"输出 {len(alerts)} 条信号 → {filepath}"
         )
-        for alert in alerts:
-            logger.info(f"  {alert.format_line()}")
+        for line in lines:
+            logger.info(f"  {line}")
 
     def summary(self) -> str:
         """返回输出统计摘要。"""

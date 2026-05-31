@@ -10,6 +10,8 @@
 提供：
     resolve_primary_theme(symbol) -> str | None
     resolve_themes(symbol) -> list[str]
+    resolve_industry(symbol) -> str | None
+    resolve_related_by_theme(theme, exclude_symbol, limit=5) -> list[tuple[str, str]]
     aggregate_top_themes(symbols, top_n=3) -> list[ThemeBucket]
 """
 
@@ -262,6 +264,41 @@ class ThemeResolver:
         """获取股票名称。"""
         pure = _code_to_symbol(symbol)
         return self._name_map.get(pure, pure)
+
+    def resolve_industry(self, symbol: str) -> str | None:
+        """获取某股票的行业名称。"""
+        pure = _code_to_symbol(symbol)
+        industry = self._industry_map.get(pure, "").strip()
+        return industry or None
+
+    def resolve_related_by_theme(
+        self,
+        theme: str,
+        exclude_symbol: str = "",
+        limit: int = 5,
+    ) -> list[tuple[str, str]]:
+        """按题材反查相关个股。
+
+        返回 (symbol, name) 列表，symbol 为 6 位代码。
+        """
+        if not theme or limit <= 0:
+            return []
+
+        exclude = _code_to_symbol(exclude_symbol) if exclude_symbol else ""
+        related: list[tuple[str, str]] = []
+        seen: set[str] = set()
+
+        for sym in sorted(self._theme_map):
+            if sym == exclude or sym in seen:
+                continue
+            if theme not in self._theme_map.get(sym, []):
+                continue
+            related.append((sym, self.get_name(sym)))
+            seen.add(sym)
+            if len(related) >= limit:
+                break
+
+        return related
 
     def aggregate_top_themes(
         self,

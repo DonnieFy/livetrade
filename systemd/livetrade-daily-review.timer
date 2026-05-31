@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Livetrade Daily Review Mon-Fri at 21:30
+
+[Timer]
+OnCalendar=Mon..Fri *-*-* 21:30:00
+Persistent=true
+RandomizedDelaySec=0
+Unit=livetrade-daily-review.service
+
+[Install]
+WantedBy=timers.target
